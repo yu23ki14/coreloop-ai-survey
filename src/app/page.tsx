@@ -20,7 +20,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Generate or restore session ID
     const stored = sessionStorage.getItem("survey_session_id");
     if (stored) {
       setSessionId(stored);
@@ -30,7 +29,6 @@ export default function Home() {
       setSessionId(newId);
     }
 
-    // Restore state if page was refreshed
     const storedState = sessionStorage.getItem("survey_state");
     if (storedState === "page2") {
       const storedPage1 = sessionStorage.getItem("survey_page1_data");
@@ -109,54 +107,78 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50/50">
       {/* Header */}
       <header className="border-b border-border bg-white sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          <h1 className="text-lg font-bold text-primary">{SURVEY_INTRO.title}</h1>
+        <div className="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between">
+          <h1 className="text-base font-bold text-primary leading-tight">
+            {SURVEY_INTRO.title}
+          </h1>
+          {(state === "page1" || state === "page2") && (
+            <span className="text-xs text-text-muted bg-surface px-2.5 py-1 rounded-full">
+              {state === "page1" ? "1" : "2"} / 2 ページ
+            </span>
+          )}
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-8">
+      <main className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
         {/* Error banner */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start justify-between gap-3">
             <p className="text-sm text-red-700">{error}</p>
             <button
               onClick={() => setError(null)}
-              className="text-xs text-red-500 mt-1 underline"
+              className="text-red-400 hover:text-red-600 shrink-0"
             >
-              閉じる
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
         )}
 
         {/* Intro */}
         {state === "intro" && (
-          <div className="space-y-6">
-            <div className="bg-surface border border-border rounded-xl p-6">
-              <h2 className="text-xl font-bold text-text mb-4">
+          <div className="space-y-8 py-4">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold text-text">
                 {SURVEY_INTRO.subtitle}
               </h2>
-              <div className="space-y-3 text-sm text-text-secondary leading-relaxed whitespace-pre-line">
+              <p className="text-sm text-text-muted">
+                {SURVEY_INTRO.estimatedTime}
+              </p>
+            </div>
+
+            <div className="bg-white border border-border rounded-2xl p-6 space-y-4">
+              <div className="text-sm text-text-secondary leading-relaxed whitespace-pre-line">
                 {SURVEY_INTRO.description}
               </div>
-              <div className="mt-4 space-y-2">
-                <p className="text-sm text-text-muted">
-                  {SURVEY_INTRO.estimatedTime}
-                </p>
-                <p className="text-xs text-text-muted">
-                  {SURVEY_INTRO.privacyNote}
-                </p>
-                <p className="text-xs text-text-muted">
-                  {SURVEY_INTRO.aiNote}
-                </p>
+              <hr className="border-border" />
+              <div className="space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <svg className="w-4 h-4 text-text-muted shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <p className="text-xs text-text-muted leading-relaxed">
+                    {SURVEY_INTRO.privacyNote}
+                  </p>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <svg className="w-4 h-4 text-text-muted shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  <p className="text-xs text-text-muted leading-relaxed">
+                    {SURVEY_INTRO.aiNote}
+                  </p>
+                </div>
               </div>
             </div>
+
             <div className="flex justify-center">
               <button
                 onClick={() => setState("page1")}
-                className="px-8 py-3 bg-primary text-white rounded-xl text-base font-semibold hover:bg-primary-light transition-all shadow-md hover:shadow-lg"
+                className="px-10 py-3.5 bg-primary text-white rounded-xl text-base font-semibold hover:bg-primary-light transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
               >
                 調査を始める
               </button>
@@ -180,8 +202,8 @@ export default function Home() {
 
         {/* Complete */}
         {state === "complete" && (
-          <div className="text-center py-16 space-y-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100">
+          <div className="text-center py-20 space-y-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-50 border-2 border-green-200">
               <svg
                 className="w-8 h-8 text-success"
                 fill="none"
@@ -196,26 +218,26 @@ export default function Home() {
                 />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-text">
-              ご回答ありがとうございました
-            </h2>
-            <p className="text-text-secondary max-w-md mx-auto leading-relaxed">
-              いただいたご意見は、今後の熟議型世論調査での論点整理に活用させていただきます。
-              みなさまの声が、より良い政策づくりの一助となります。
-            </p>
+            <div className="space-y-3">
+              <h2 className="text-2xl font-bold text-text">
+                ご回答ありがとうございました
+              </h2>
+              <p className="text-text-secondary max-w-md mx-auto leading-relaxed">
+                いただいたご意見は、今後の熟議型世論調査での論点整理に活用させていただきます。
+                みなさまの声が、より良い政策づくりの一助となります。
+              </p>
+            </div>
           </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border mt-16 py-6">
-        <div className="max-w-3xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-text-muted">
+      <footer className="border-t border-border bg-white mt-12 py-5">
+        <div className="max-w-2xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-text-muted">
           <p>市民意識調査プロジェクト</p>
-          <div className="flex gap-4">
-            <Link href="/transparency" className="hover:text-accent underline">
-              AIの使用について
-            </Link>
-          </div>
+          <Link href="/transparency" className="hover:text-accent underline underline-offset-2">
+            AIの使用について
+          </Link>
         </div>
       </footer>
     </div>

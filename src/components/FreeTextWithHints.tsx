@@ -10,8 +10,6 @@ interface FreeTextWithHintsProps {
   onChange: (value: string) => void;
   previousAnswers: Record<string, { likert: string; freetext: string }>;
   starterSentences: string[];
-  pros: string[];
-  cons: string[];
 }
 
 export default function FreeTextWithHints({
@@ -21,8 +19,6 @@ export default function FreeTextWithHints({
   onChange,
   previousAnswers,
   starterSentences,
-  pros,
-  cons,
 }: FreeTextWithHintsProps) {
   const [hint, setHint] = useState<string>("");
   const [isLoadingHint, setIsLoadingHint] = useState(false);
@@ -83,7 +79,7 @@ export default function FreeTextWithHints({
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
-          return; // Request was cancelled, ignore
+          return;
         }
         console.error("Hint fetch error:", err);
       } finally {
@@ -99,12 +95,10 @@ export default function FreeTextWithHints({
   const handleTextChange = (newText: string) => {
     onChange(newText);
 
-    // Clear existing timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
-    // Check for sentence completion (。or 。 or period)
     const sentenceEnded =
       newText.length > 0 &&
       (newText.endsWith("。") ||
@@ -112,10 +106,8 @@ export default function FreeTextWithHints({
         newText.endsWith("\n"));
 
     if (sentenceEnded && newText.length > 10) {
-      // Trigger immediately on sentence completion
       debounceTimerRef.current = setTimeout(() => fetchHint(newText), 300);
     } else if (newText.length > 5) {
-      // Debounce: trigger 2 seconds after typing stops
       debounceTimerRef.current = setTimeout(() => fetchHint(newText), 2000);
     }
   };
@@ -130,11 +122,8 @@ export default function FreeTextWithHints({
     onChange(sentence);
     setShowStarters(false);
     setShowEditEncouragement(true);
-    // Hide encouragement after 4 seconds
-    setTimeout(() => setShowEditEncouragement(false), 4000);
-    // Focus textarea
+    setTimeout(() => setShowEditEncouragement(false), 5000);
     textareaRef.current?.focus();
-    // Trigger hint after a short delay
     setTimeout(() => fetchHint(sentence), 500);
   };
 
@@ -159,11 +148,11 @@ export default function FreeTextWithHints({
       {/* Header */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-text-secondary">
-          理由を教えてください。
-          <span className="text-text-muted ml-1">（任意）</span>
+          そう思う理由を教えてください。
+          <span className="text-text-muted ml-1">（任意・スキップ可）</span>
         </p>
         {value.length > 0 && (
-          <span className="text-xs text-text-muted">
+          <span className="text-xs text-text-muted tabular-nums">
             {value.length}文字
           </span>
         )}
@@ -171,17 +160,17 @@ export default function FreeTextWithHints({
 
       {/* Starter sentences */}
       {showStarters && likertAnswer && (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <p className="text-xs text-text-muted">
-            書き始めのきっかけとして、以下をクリックできます：
+            クリックして回答を始められます：
           </p>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             {starterSentences.map((sentence, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => handleStarterClick(sentence)}
-                className="starter-chip text-left text-sm px-3 py-2 rounded-lg border border-border-dark bg-surface hover:bg-surface-dark text-text-secondary"
+                className="starter-chip text-left text-sm px-3.5 py-2.5 rounded-lg border border-border bg-surface hover:bg-surface-dark text-text-secondary leading-relaxed"
               >
                 {sentence}
               </button>
@@ -192,9 +181,14 @@ export default function FreeTextWithHints({
 
       {/* Encouragement micro-copy */}
       {showEditEncouragement && (
-        <p className="text-xs text-accent animate-pulse">
-          このまま送信もできますが、自分の言葉で書き直すとより良い回答になります
-        </p>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100">
+          <svg className="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-xs text-blue-600">
+            このまま送信もできますが、自分の言葉で書き直したり書き足すとより良い回答になります
+          </p>
+        </div>
       )}
 
       {/* Textarea */}
@@ -209,9 +203,9 @@ export default function FreeTextWithHints({
 
       {/* AI Hint area */}
       {(hint || isLoadingHint) && (
-        <div className="relative bg-surface border border-border rounded-lg p-4">
+        <div className="relative rounded-lg p-4 bg-amber-50/60 border border-amber-200/60">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-text-muted flex items-center gap-1.5">
+            <span className="text-xs font-medium text-amber-700/80 flex items-center gap-1.5">
               <svg
                 className="w-3.5 h-3.5"
                 fill="none"
@@ -227,14 +221,14 @@ export default function FreeTextWithHints({
               </svg>
               考えるヒント
               {isLoadingHint && (
-                <span className="inline-block w-3 h-3 border-2 border-text-muted border-t-transparent rounded-full animate-spin" />
+                <span className="inline-block w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
               )}
             </span>
             <button
               type="button"
               onClick={handleManualRefresh}
               disabled={isLoadingHint}
-              className="text-xs text-accent hover:text-accent-light disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+              className="text-xs text-amber-600 hover:text-amber-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
             >
               <svg
                 className="w-3 h-3"
@@ -249,11 +243,11 @@ export default function FreeTextWithHints({
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-              ヒントを更新
+              別のヒント
             </button>
           </div>
           <p
-            className={`text-sm text-text-secondary leading-relaxed transition-all duration-300 ${
+            className={`text-sm text-amber-900/80 leading-relaxed transition-all duration-300 ${
               hintVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
             }`}
           >
@@ -261,39 +255,6 @@ export default function FreeTextWithHints({
           </p>
         </div>
       )}
-
-      {/* Pros & Cons reference (collapsed) */}
-      <details className="group">
-        <summary className="text-xs text-text-muted cursor-pointer hover:text-text-secondary">
-          賛成・反対の主な論点を見る
-        </summary>
-        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="bg-blue-50 rounded-lg p-3">
-            <p className="text-xs font-medium text-blue-800 mb-1.5">
-              賛成の主な論点
-            </p>
-            <ul className="space-y-1">
-              {pros.map((p, i) => (
-                <li key={i} className="text-xs text-blue-700 leading-relaxed">
-                  ・{p}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="bg-red-50 rounded-lg p-3">
-            <p className="text-xs font-medium text-red-800 mb-1.5">
-              反対の主な論点
-            </p>
-            <ul className="space-y-1">
-              {cons.map((c, i) => (
-                <li key={i} className="text-xs text-red-700 leading-relaxed">
-                  ・{c}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </details>
     </div>
   );
 }

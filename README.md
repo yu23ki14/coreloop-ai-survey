@@ -18,7 +18,7 @@
 |---------|------|
 | フロントエンド | Next.js 15 (App Router) + TypeScript + Tailwind CSS v4 |
 | データベース | Supabase (PostgreSQL + RLS) |
-| AI | Gemini 2.5 Flash Preview（OpenRouter経由） |
+| AI | Gemini 3 Flash Preview（OpenRouter経由） |
 | ホスティング | Vercel |
 
 ## セットアップ

@@ -26,7 +26,7 @@ export async function callOpenRouter(
       "X-Title": "市民意識調査 / Citizen Survey",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash-preview",
+      model: "google/gemini-3-flash-preview",
       messages,
       max_tokens: options?.maxTokens ?? 1024,
       temperature: options?.temperature ?? 0.7,
@@ -44,9 +44,9 @@ export async function callOpenRouter(
 
 // Model info for transparency page
 export const MODEL_INFO = {
-  id: "google/gemini-2.5-flash-preview",
-  name: "Gemini 2.5 Flash Preview",
+  id: "google/gemini-3-flash-preview",
+  name: "Gemini 3 Flash Preview",
   provider: "Google (via OpenRouter)",
   description:
-    "Google の Gemini 2.5 Flash Preview モデルを OpenRouter 経由で使用しています。回答のヒント生成と、フォローアップ質問の生成に使用されます。",
+    "Google の Gemini 3 Flash Preview モデルを OpenRouter 経由で使用しています。回答のヒント生成と、フォローアップ質問の生成に使用されます。",
 };

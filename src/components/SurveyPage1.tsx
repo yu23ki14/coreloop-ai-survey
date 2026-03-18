@@ -62,20 +62,20 @@ export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Progress */}
       <ProgressBar
         current={completedCount}
         total={totalRequired}
-        label={`ページ 1/2 - ${completedCount}/${totalRequired} 問回答済み`}
+        label={`ページ 1/2 — ${completedCount}/${totalRequired} 問回答済み`}
       />
 
       {/* Interest Level */}
-      <section className="bg-white border border-border rounded-xl p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-text mb-2">
-          はじめに：オンライン広告詐欺の問題への関心度
+      <section className="bg-white border border-border rounded-2xl p-5 sm:p-6">
+        <h3 className="text-[15px] font-semibold text-text mb-1.5">
+          はじめに：この問題への関心度を教えてください
         </h3>
-        <p className="text-sm text-text-secondary mb-4">
+        <p className="text-sm text-text-muted mb-4">
           SNSなどに表示される偽の広告による詐欺問題について、どの程度関心をお持ちですか？
         </p>
         <div className="flex flex-wrap gap-2">
@@ -84,10 +84,10 @@ export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props
               key={opt.value}
               type="button"
               onClick={() => setInterestLevel(parseInt(opt.value))}
-              className={`likert-option px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+              className={`likert-option px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
                 interestLevel === parseInt(opt.value)
-                  ? "bg-primary text-white border-primary"
-                  : "bg-white text-text-secondary border-border hover:border-accent hover:text-accent"
+                  ? "bg-primary text-white border-primary shadow-sm"
+                  : "bg-white text-text-secondary border-border hover:border-primary/40 hover:text-primary"
               }`}
             >
               {opt.label}
@@ -97,64 +97,69 @@ export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props
       </section>
 
       {/* Questions Q1-Q6 */}
-      {SURVEY_QUESTIONS.map((question, index) => (
-        <section
-          key={question.id}
-          className="bg-white border border-border rounded-xl p-6 shadow-sm"
-        >
-          <div className="mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary text-white text-xs font-bold">
-                {index + 1}
-              </span>
-              <span className="text-xs text-text-muted">{question.description}</span>
+      {SURVEY_QUESTIONS.map((question, index) => {
+        const hasLikert = !!answers[question.id]?.likert;
+
+        return (
+          <section
+            key={question.id}
+            className="bg-white border border-border rounded-2xl p-5 sm:p-6"
+          >
+            {/* Question header */}
+            <div className="mb-4">
+              <p className="text-xs text-text-muted mb-2">{question.description}</p>
+              <div className="flex gap-3 items-start">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0 mt-0.5">
+                  {index + 1}
+                </span>
+                <h3 className="text-[15px] font-semibold text-text leading-relaxed">
+                  {question.text}
+                </h3>
+              </div>
             </div>
-            <h3 className="text-base font-semibold text-text leading-relaxed">
-              {question.text}
-            </h3>
-          </div>
 
-          {/* Likert Scale */}
-          <div className="mb-4">
-            <LikertScale
-              value={answers[question.id]?.likert || null}
-              onChange={(val) => setLikert(question.id, val)}
-            />
-          </div>
-
-          {/* Free text with AI hints (shown after Likert selection) */}
-          {answers[question.id]?.likert && (
-            <div className="border-t border-border pt-4">
-              <FreeTextWithHints
-                questionId={question.id}
-                likertAnswer={answers[question.id]?.likert || null}
-                value={answers[question.id]?.freetext || ""}
-                onChange={(val) => setFreetext(question.id, val)}
-                previousAnswers={previousAnswersForHints}
-                starterSentences={question.starterSentences}
-                pros={question.pros}
-                cons={question.cons}
+            {/* Likert Scale */}
+            <div className={`${hasLikert ? "mb-5" : ""}`}>
+              <LikertScale
+                value={answers[question.id]?.likert || null}
+                onChange={(val) => setLikert(question.id, val)}
               />
             </div>
-          )}
-        </section>
-      ))}
+
+            {/* Free text with AI hints (shown after Likert selection) */}
+            {hasLikert && (
+              <div className="border-t border-border/60 pt-4">
+                <FreeTextWithHints
+                  questionId={question.id}
+                  likertAnswer={answers[question.id]?.likert || null}
+                  value={answers[question.id]?.freetext || ""}
+                  onChange={(val) => setFreetext(question.id, val)}
+                  previousAnswers={previousAnswersForHints}
+                  starterSentences={question.starterSentences}
+                />
+              </div>
+            )}
+          </section>
+        );
+      })}
 
       {/* Submit */}
-      <div className="flex flex-col items-center gap-3 pt-4">
+      <div className="flex flex-col items-center gap-3 pt-2 pb-4">
         {!canSubmit && (
-          <p className="text-sm text-text-muted">
-            全ての設問（選択式）に回答すると次のページに進めます。自由記述は任意です。
+          <p className="text-sm text-text-muted text-center">
+            全ての設問の選択式に回答すると次のページに進めます。
+            <br />
+            <span className="text-xs">自由記述はスキップできます。</span>
           </p>
         )}
         <button
           type="button"
           onClick={handleSubmit}
           disabled={!canSubmit || isSubmitting}
-          className={`px-8 py-3 rounded-xl text-base font-semibold transition-all ${
+          className={`px-10 py-3.5 rounded-xl text-base font-semibold transition-all ${
             canSubmit && !isSubmitting
-              ? "bg-primary text-white hover:bg-primary-light shadow-md hover:shadow-lg"
-              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+              ? "bg-primary text-white hover:bg-primary-light shadow-md hover:shadow-lg active:scale-[0.98]"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
         >
           {isSubmitting ? (
@@ -163,12 +168,9 @@ export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props
               送信中...
             </span>
           ) : (
-            "次のページへ進む"
+            "次のページへ進む →"
           )}
         </button>
-        <p className="text-xs text-text-muted">
-          自由記述をスキップして進むこともできます
-        </p>
       </div>
     </div>
   );
