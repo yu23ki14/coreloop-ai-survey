@@ -81,3 +81,24 @@ CREATE TRIGGER update_responses_updated_at
   BEFORE UPDATE ON responses
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================
+-- LLM response cache table
+-- ============================================================
+CREATE TABLE IF NOT EXISTS llm_cache (
+  cache_key TEXT PRIMARY KEY,
+  request_body JSONB NOT NULL,
+  response TEXT NOT NULL,
+  model TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index for cleanup queries (e.g. delete old entries)
+CREATE INDEX IF NOT EXISTS idx_llm_cache_created_at ON llm_cache(created_at);
+
+-- RLS: Only service role can access cache
+ALTER TABLE llm_cache ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access to llm_cache" ON llm_cache
+  FOR ALL USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');

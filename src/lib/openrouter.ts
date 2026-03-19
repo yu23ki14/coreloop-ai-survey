@@ -1,4 +1,7 @@
+import { getCachedResponse, setCachedResponse } from "./llm-cache";
+
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const MODEL = "google/gemini-3-flash-preview";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -10,8 +13,20 @@ export async function callOpenRouter(
   options?: {
     maxTokens?: number;
     temperature?: number;
+    skipCache?: boolean;
   }
 ): Promise<string> {
+  const maxTokens = options?.maxTokens ?? 1024;
+  const temperature = options?.temperature ?? 0.7;
+
+  // Check cache first (unless explicitly skipped)
+  if (!options?.skipCache) {
+    const cached = await getCachedResponse(messages, MODEL, maxTokens, temperature);
+    if (cached !== null) {
+      return cached;
+    }
+  }
+
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is not set");
@@ -26,10 +41,10 @@ export async function callOpenRouter(
       "X-Title": "市民意識調査 / Citizen Survey",
     },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: MODEL,
       messages,
-      max_tokens: options?.maxTokens ?? 1024,
-      temperature: options?.temperature ?? 0.7,
+      max_tokens: maxTokens,
+      temperature,
     }),
   });
 
@@ -39,12 +54,19 @@ export async function callOpenRouter(
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content ?? "";
+  const content = data.choices?.[0]?.message?.content ?? "";
+
+  // Store in cache (fire-and-forget)
+  if (!options?.skipCache) {
+    setCachedResponse(messages, MODEL, maxTokens, temperature, content).catch(() => {});
+  }
+
+  return content;
 }
 
 // Model info for transparency page
 export const MODEL_INFO = {
-  id: "google/gemini-3-flash-preview",
+  id: MODEL,
   name: "Gemini 3 Flash Preview",
   provider: "Google (via OpenRouter)",
   description:
