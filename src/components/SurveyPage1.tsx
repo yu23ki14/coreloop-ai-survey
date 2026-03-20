@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SURVEY_QUESTIONS, INTEREST_OPTIONS, getFreetextGuide, type LikertValue } from "@/lib/survey-data";
+import { SURVEY_QUESTIONS, INTEREST_OPTIONS, getFreetextGuide, getStarterSentences, type LikertValue } from "@/lib/survey-data";
 import LikertScale from "./LikertScale";
 import FreeTextWithHints from "./FreeTextWithHints";
 import ProgressBar from "./ProgressBar";
@@ -135,7 +135,7 @@ export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props
                   value={answers[question.id]?.freetext || ""}
                   onChange={(val) => setFreetext(question.id, val)}
                   previousAnswers={previousAnswersForHints}
-                  starterSentences={question.starterSentences}
+                  starterSentences={getStarterSentences(question, answers[question.id]?.likert || null)}
                   guide={getFreetextGuide(question, answers[question.id]?.likert || null)}
                 />
               </div>
