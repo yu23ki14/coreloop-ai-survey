@@ -34,8 +34,8 @@ export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props
     }));
   };
 
-  // Calculate progress
-  const totalRequired = 7; // interest + 6 likert
+  // Calculate progress (global: interest + Q1-6 + Q7-10 = 11)
+  const totalRequired = 11;
   const completedCount =
     (interestLevel ? 1 : 0) +
     SURVEY_QUESTIONS.filter((q) => answers[q.id]?.likert).length;
@@ -67,7 +67,7 @@ export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props
       <ProgressBar
         current={completedCount}
         total={totalRequired}
-        label={`ページ 1/2 — ${completedCount}/${totalRequired} 問回答済み`}
+        label={`${completedCount}/${totalRequired} 問回答済み`}
       />
 
       {/* Interest Level */}

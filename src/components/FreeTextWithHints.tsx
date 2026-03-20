@@ -152,7 +152,7 @@ export default function FreeTextWithHints({
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-text-secondary">
             {guide?.label || "そう思う理由を教えてください"}
-            <span className="text-text-muted font-normal ml-1">（任意・スキップ可）</span>
+            <span className="text-text-muted font-normal ml-1">（任意）</span>
           </p>
           {value.length > 0 && (
             <span className="text-xs text-text-muted tabular-nums">

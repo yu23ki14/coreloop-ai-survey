@@ -65,7 +65,10 @@ export default function SurveyPage2({
     setFollowupAnswers((prev) => ({ ...prev, [qId]: value }));
   };
 
-  const answeredCount = questions.filter((q) => followupAnswers[q.id]).length;
+  const page2AnsweredCount = questions.filter((q) => followupAnswers[q.id]).length;
+  // Global progress: 7 from page 1 (interest + Q1-6) + page 2 answers
+  const globalCompleted = 7 + page2AnsweredCount;
+  const globalTotal = 11;
   const canSubmit = questions.length > 0 && questions.every((q) => followupAnswers[q.id]);
 
   const handleSubmit = () => {
@@ -96,9 +99,9 @@ export default function SurveyPage2({
     <div className="space-y-6">
       {/* Progress */}
       <ProgressBar
-        current={answeredCount}
-        total={questions.length}
-        label={`ページ 2/2 — ${answeredCount}/${questions.length} 問回答済み`}
+        current={globalCompleted}
+        total={globalTotal}
+        label={`${globalCompleted}/${globalTotal} 問回答済み`}
       />
 
       {/* Intro text */}
