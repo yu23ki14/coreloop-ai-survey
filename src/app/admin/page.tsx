@@ -356,66 +356,61 @@ export default function AdminPage() {
           <div className="space-y-6">
             <div className="bg-surface border border-border rounded-xl p-5">
               <p className="text-sm text-text-secondary">
-                Q7-Q10は回答者ごとにAIが生成した質問です。質問文と回答の組み合わせを表示します。
+                Q7-Q10は回答者ごとにAIが個別生成した質問です。参加者ごとに質問と回答を表示します。
               </p>
             </div>
-            {["q7", "q8", "q9", "q10"].map((qId) => {
-              const entries = data.followupData[qId] || [];
-              // Group by question text
-              const grouped: Record<
-                string,
-                Record<string, number>
-              > = {};
-              for (const entry of entries) {
-                if (!grouped[entry.text]) grouped[entry.text] = {};
-                grouped[entry.text][entry.likert] =
-                  (grouped[entry.text][entry.likert] || 0) + 1;
+            {(() => {
+              const respondents = (data.responses || []).filter(
+                (r) => r.q7_text || r.q8_text || r.q9_text || r.q10_text
+              );
+              if (respondents.length === 0) {
+                return (
+                  <div className="bg-white border border-border rounded-xl p-6">
+                    <p className="text-sm text-text-muted">Q7-Q10の回答はまだありません。</p>
+                  </div>
+                );
               }
-
-              return (
+              return respondents.map((r, idx) => (
                 <div
-                  key={qId}
+                  key={idx}
                   className="bg-white border border-border rounded-xl p-6"
                 >
-                  <h3 className="font-semibold text-text mb-4">
-                    {qId.toUpperCase()} ({entries.length}件の回答)
-                  </h3>
-                  {Object.keys(grouped).length === 0 ? (
-                    <p className="text-sm text-text-muted">回答がありません。</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {Object.entries(grouped).map(([text, dist], j) => {
-                        const total = Object.values(dist).reduce((s, v) => s + v, 0);
-                        return (
-                          <div key={j} className="border-b border-border pb-3 last:border-0">
-                            <p className="text-sm text-text mb-2">
-                              「{text}」
-                              <span className="text-text-muted ml-2">
-                                (n={total})
-                              </span>
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {LIKERT_OPTIONS.map((opt) => {
-                                const count = dist[opt.value] || 0;
-                                if (count === 0) return null;
-                                return (
-                                  <span
-                                    key={opt.value}
-                                    className="text-xs px-2 py-1 bg-surface rounded"
-                                  >
-                                    {opt.label}: {count}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-text">
+                      回答者 #{respondents.length - idx}
+                    </h3>
+                    <span className="text-xs text-text-muted">
+                      {r.created_at
+                        ? new Date(r.created_at as string).toLocaleString(
+                            "ja-JP",
+                            { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }
+                          )
+                        : ""}
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    {(["q7", "q8", "q9", "q10"] as const).map((qId, qIdx) => {
+                      const text = r[`${qId}_text`] as string | undefined;
+                      const likert = r[`${qId}_likert`] as string | undefined;
+                      if (!text) return null;
+                      return (
+                        <div key={qId} className="bg-surface rounded-lg p-4">
+                          <p className="text-xs text-text-muted mb-1">Q{qIdx + 7}</p>
+                          <p className="text-sm text-text mb-2">{text}</p>
+                          {likert && (
+                            <span
+                              className={`inline-block text-xs px-2.5 py-1 rounded-full text-white ${LIKERT_COLORS[likert] || "bg-gray-400"}`}
+                            >
+                              {LIKERT_LABELS[likert] || likert}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              );
-            })}
+              ));
+            })()}
           </div>
         )}
 
