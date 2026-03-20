@@ -6,6 +6,7 @@ import { SURVEY_INTRO } from "@/lib/survey-data";
 import SurveyPage1 from "@/components/SurveyPage1";
 import SurveyPage2 from "@/components/SurveyPage2";
 import Link from "next/link";
+import FraudEducationCarousel from "@/components/FraudEducationCarousel";
 
 type SurveyState = "intro" | "page1" | "page2" | "complete";
 
@@ -149,6 +150,8 @@ export default function Home() {
                 {SURVEY_INTRO.estimatedTime}
               </p>
             </div>
+
+            <FraudEducationCarousel />
 
             <div className="bg-white border border-border rounded-2xl p-6 space-y-4">
               <div className="text-sm text-text-secondary leading-relaxed whitespace-pre-line">
