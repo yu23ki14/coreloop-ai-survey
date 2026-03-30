@@ -180,7 +180,7 @@ export default function Home() {
 
             <div className="flex justify-center">
               <button
-                onClick={() => setState("page1")}
+                onClick={() => { setState("page1"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                 className="px-10 py-3.5 bg-primary text-white rounded-xl text-base font-semibold hover:bg-primary-light transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
               >
                 調査を始める
