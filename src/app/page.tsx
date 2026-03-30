@@ -108,7 +108,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-gray-50/50 flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-white sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between">
@@ -123,7 +123,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
+      <main className="max-w-2xl mx-auto px-4 py-6 sm:py-8 flex-1">
         {/* Error banner */}
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start justify-between gap-3">
