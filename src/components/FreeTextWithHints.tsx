@@ -31,6 +31,7 @@ export default function FreeTextWithHints({
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastHintTextRef = useRef<string>("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Hide starters once user has typed something
   useEffect(() => {
@@ -126,6 +127,9 @@ export default function FreeTextWithHints({
     setShowEditEncouragement(true);
     setTimeout(() => setShowEditEncouragement(false), 5000);
     textareaRef.current?.focus();
+    setTimeout(() => {
+      containerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 100);
     setTimeout(() => fetchHint(sentence), 500);
   };
 
@@ -146,7 +150,7 @@ export default function FreeTextWithHints({
   }, []);
 
   return (
-    <div className="space-y-3">
+    <div ref={containerRef} className="space-y-3">
       {/* Header */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
