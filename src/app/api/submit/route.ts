@@ -1,10 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
 
+export async function GET(req: NextRequest) {
+  try {
+    const sessionId = req.nextUrl.searchParams.get("sessionId");
+    if (!sessionId) {
+      return NextResponse.json(
+        { error: "Session ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("responses")
+      .select("*")
+      .eq("session_id", sessionId)
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json({ found: false });
+    }
+
+    return NextResponse.json({ found: true, data });
+  } catch (error) {
+    console.error("Session recovery error:", error);
+    return NextResponse.json(
+      { error: "セッションの復元中にエラーが発生しました。" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { sessionId, data, page } = body;
+    const { sessionId, data, page, partial } = body;
 
     if (!sessionId) {
       return NextResponse.json(
@@ -14,6 +45,45 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createAdminClient();
+
+    // Partial save (real-time debounced saves)
+    if (partial) {
+      const row: Record<string, unknown> = {
+        session_id: sessionId,
+        user_agent: data.userAgent || "",
+      };
+
+      if (data.interestLevel !== undefined) {
+        row.interest_level = data.interestLevel;
+      }
+
+      // Add Q1-Q6 answers if present
+      for (let i = 1; i <= 6; i++) {
+        const qId = `q${i}`;
+        if (data.answers?.[qId]) {
+          if (data.answers[qId].likert) {
+            row[`${qId}_likert`] = data.answers[qId].likert;
+          }
+          if (data.answers[qId].freetext !== undefined) {
+            row[`${qId}_freetext`] = data.answers[qId].freetext;
+          }
+        }
+      }
+
+      const { error } = await supabase.from("responses").upsert(row, {
+        onConflict: "session_id",
+      });
+
+      if (error) {
+        console.error("Supabase partial save error:", error);
+        return NextResponse.json(
+          { error: "回答の部分保存に失敗しました。" },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({ success: true });
+    }
 
     if (page === 1) {
       // Upsert page 1 data

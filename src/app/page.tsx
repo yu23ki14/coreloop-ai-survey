@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { SURVEY_INTRO } from "@/lib/survey-data";
 import SurveyPage1 from "@/components/SurveyPage1";
@@ -14,31 +14,140 @@ export default function Home() {
   const [state, setState] = useState<SurveyState>("intro");
   const [sessionId, setSessionId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRecovering, setIsRecovering] = useState(true);
   const [page1Data, setPage1Data] = useState<{
     interestLevel: number;
     answers: Record<string, { likert: string; freetext: string }>;
   } | null>(null);
+  const [restoredPage1Data, setRestoredPage1Data] = useState<{
+    interestLevel: number | null;
+    answers: Record<string, { likert: string; freetext: string }>;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Debounced partial save
+  const savePartial = useCallback(
+    (data: {
+      interestLevel?: number | null;
+      answers?: Record<string, { likert: string; freetext: string }>;
+    }) => {
+      if (!sessionId) return;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(async () => {
+        try {
+          await fetch("/api/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId,
+              partial: true,
+              data: {
+                ...data,
+                userAgent: navigator.userAgent,
+              },
+            }),
+          });
+        } catch {
+          // Silent fail for partial saves
+        }
+      }, 2000);
+    },
+    [sessionId]
+  );
+
+  // Initialize session and recover state
   useEffect(() => {
-    const stored = sessionStorage.getItem("survey_session_id");
-    if (stored) {
-      setSessionId(stored);
-    } else {
-      const newId = uuidv4();
-      sessionStorage.setItem("survey_session_id", newId);
-      setSessionId(newId);
-    }
-
-    const storedState = sessionStorage.getItem("survey_state");
-    if (storedState === "page2") {
-      const storedPage1 = sessionStorage.getItem("survey_page1_data");
-      if (storedPage1) {
-        setPage1Data(JSON.parse(storedPage1));
-        setState("page2");
+    const initSession = async () => {
+      // Get or create session ID from localStorage
+      let sid = localStorage.getItem("survey_session_id");
+      if (!sid) {
+        sid = uuidv4();
+        localStorage.setItem("survey_session_id", sid);
       }
-    }
+      setSessionId(sid);
+
+      // Try to recover session from DB
+      try {
+        const response = await fetch(`/api/submit?sessionId=${sid}`);
+        const result = await response.json();
+
+        if (result.found && result.data) {
+          const d = result.data;
+
+          if (d.page_completed === 2) {
+            // Already completed
+            setState("complete");
+          } else if (d.page_completed === 1) {
+            // Page 1 completed, restore to page 2
+            const answers: Record<string, { likert: string; freetext: string }> = {};
+            for (let i = 1; i <= 6; i++) {
+              const qId = `q${i}`;
+              answers[qId] = {
+                likert: d[`${qId}_likert`] || "",
+                freetext: d[`${qId}_freetext`] || "",
+              };
+            }
+            const restored = {
+              interestLevel: d.interest_level,
+              answers,
+            };
+            setPage1Data(restored);
+            setState("page2");
+          } else {
+            // Page 1 in progress — restore partial answers
+            const hasAnyAnswer = Array.from({ length: 6 }, (_, i) => `q${i + 1}`).some(
+              (qId) => d[`${qId}_likert`]
+            );
+            if (d.interest_level || hasAnyAnswer) {
+              const answers: Record<string, { likert: string; freetext: string }> = {};
+              for (let i = 1; i <= 6; i++) {
+                const qId = `q${i}`;
+                if (d[`${qId}_likert`]) {
+                  answers[qId] = {
+                    likert: d[`${qId}_likert`] || "",
+                    freetext: d[`${qId}_freetext`] || "",
+                  };
+                }
+              }
+              setRestoredPage1Data({
+                interestLevel: d.interest_level || null,
+                answers,
+              });
+              setState("page1");
+            }
+          }
+        }
+      } catch {
+        // Recovery failed, start fresh
+      }
+
+      setIsRecovering(false);
+    };
+
+    initSession();
   }, []);
+
+  // Create DB record when starting the survey
+  const handleStartSurvey = useCallback(async () => {
+    setState("page1");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Create initial record in DB
+    try {
+      await fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          partial: true,
+          data: { userAgent: navigator.userAgent },
+        }),
+      });
+    } catch {
+      // Silent fail
+    }
+  }, [sessionId]);
 
   const handlePage1Submit = async (data: {
     interestLevel: number;
@@ -63,8 +172,6 @@ export default function Home() {
       if (!response.ok) throw new Error("Failed to submit page 1");
 
       setPage1Data(data);
-      sessionStorage.setItem("survey_page1_data", JSON.stringify(data));
-      sessionStorage.setItem("survey_state", "page2");
       setState("page2");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
@@ -95,8 +202,7 @@ export default function Home() {
 
       if (!response.ok) throw new Error("Failed to submit page 2");
 
-      sessionStorage.removeItem("survey_state");
-      sessionStorage.removeItem("survey_page1_data");
+      localStorage.removeItem("survey_session_id");
       setState("complete");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
@@ -106,6 +212,18 @@ export default function Home() {
       setIsSubmitting(false);
     }
   };
+
+  // Show loading while recovering session
+  if (isRecovering) {
+    return (
+      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-[3px] border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-text-muted">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50/50 flex flex-col">
@@ -180,7 +298,7 @@ export default function Home() {
 
             <div className="flex justify-center">
               <button
-                onClick={() => { setState("page1"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                onClick={handleStartSurvey}
                 className="px-10 py-3.5 bg-primary text-white rounded-xl text-base font-semibold hover:bg-primary-light transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
               >
                 調査を始める
@@ -191,7 +309,12 @@ export default function Home() {
 
         {/* Page 1 */}
         {state === "page1" && (
-          <SurveyPage1 onSubmit={handlePage1Submit} isSubmitting={isSubmitting} />
+          <SurveyPage1
+            onSubmit={handlePage1Submit}
+            isSubmitting={isSubmitting}
+            onPartialSave={savePartial}
+            restoredData={restoredPage1Data}
+          />
         )}
 
         {/* Page 2 */}

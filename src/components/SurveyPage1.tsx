@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SURVEY_QUESTIONS, INTEREST_OPTIONS, getFreetextGuide, getStarterSentences, type LikertValue } from "@/lib/survey-data";
 import LikertScale from "./LikertScale";
 import FreeTextWithHints from "./FreeTextWithHints";
@@ -12,13 +12,53 @@ interface SurveyPage1Props {
     answers: Record<string, { likert: string; freetext: string }>;
   }) => void;
   isSubmitting: boolean;
+  onPartialSave?: (data: {
+    interestLevel?: number | null;
+    answers?: Record<string, { likert: string; freetext: string }>;
+  }) => void;
+  restoredData?: {
+    interestLevel: number | null;
+    answers: Record<string, { likert: string; freetext: string }>;
+  } | null;
 }
 
-export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props) {
-  const [interestLevel, setInterestLevel] = useState<number | null>(null);
+export default function SurveyPage1({ onSubmit, isSubmitting, onPartialSave, restoredData }: SurveyPage1Props) {
+  const [interestLevel, setInterestLevel] = useState<number | null>(
+    restoredData?.interestLevel ?? null
+  );
   const [answers, setAnswers] = useState<
     Record<string, { likert: LikertValue | null; freetext: string }>
-  >({});
+  >(() => {
+    if (!restoredData?.answers) return {};
+    const restored: Record<string, { likert: LikertValue | null; freetext: string }> = {};
+    for (const [key, val] of Object.entries(restoredData.answers)) {
+      if (val.likert) {
+        restored[key] = { likert: val.likert as LikertValue, freetext: val.freetext || "" };
+      }
+    }
+    return restored;
+  });
+  const initializedRef = useRef(false);
+
+  // Trigger partial save on answer changes (skip initial render)
+  useEffect(() => {
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      return;
+    }
+    if (!onPartialSave) return;
+
+    const formattedAnswers: Record<string, { likert: string; freetext: string }> = {};
+    for (const [key, val] of Object.entries(answers)) {
+      if (val.likert) {
+        formattedAnswers[key] = { likert: val.likert, freetext: val.freetext };
+      }
+    }
+    onPartialSave({
+      interestLevel,
+      answers: formattedAnswers,
+    });
+  }, [interestLevel, answers, onPartialSave]);
 
   const setLikert = (qId: string, value: LikertValue) => {
     setAnswers((prev) => ({
