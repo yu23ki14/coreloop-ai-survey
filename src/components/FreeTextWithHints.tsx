@@ -11,6 +11,7 @@ interface FreeTextWithHintsProps {
   previousAnswers: Record<string, { likert: string; freetext: string }>;
   starterSentences: string[];
   guide: FreetextGuide | null;
+  hintSystemPrompt?: string;
 }
 
 export default function FreeTextWithHints({
@@ -21,6 +22,7 @@ export default function FreeTextWithHints({
   previousAnswers,
   starterSentences,
   guide,
+  hintSystemPrompt,
 }: FreeTextWithHintsProps) {
   const [hint, setHint] = useState<string>("");
   const [isLoadingHint, setIsLoadingHint] = useState(false);
@@ -65,6 +67,7 @@ export default function FreeTextWithHints({
             likertAnswer,
             currentText: text,
             previousAnswers,
+            ...(hintSystemPrompt ? { hintSystemPrompt } : {}),
           }),
           signal: controller.signal,
         });
@@ -91,7 +94,7 @@ export default function FreeTextWithHints({
         }
       }
     },
-    [questionId, likertAnswer, previousAnswers]
+    [questionId, likertAnswer, previousAnswers, hintSystemPrompt]
   );
 
   // Debounced hint trigger on text change

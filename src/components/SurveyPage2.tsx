@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LIKERT_OPTIONS, type LikertValue } from "@/lib/survey-data";
+import { type LikertValue } from "@/lib/survey-data";
 import LikertScale from "./LikertScale";
+import FreeTextWithHints from "./FreeTextWithHints";
 import ProgressBar from "./ProgressBar";
 
 interface FollowupQuestion {
   id: string;
   text: string;
+  starters?: Record<string, string[]>;
+  hintSystemPrompt?: string;
 }
 
 interface SurveyPage2Props {
@@ -15,6 +18,7 @@ interface SurveyPage2Props {
   onSubmit: (data: {
     followupQuestions: FollowupQuestion[];
     followupAnswers: Record<string, string>;
+    followupFreetexts: Record<string, string>;
     additionalComments: string;
   }) => void;
   isSubmitting: boolean;
@@ -29,6 +33,7 @@ export default function SurveyPage2({
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [followupAnswers, setFollowupAnswers] = useState<Record<string, LikertValue | null>>({});
+  const [followupFreetexts, setFollowupFreetexts] = useState<Record<string, string>>({});
   const [additionalComments, setAdditionalComments] = useState("");
 
   // Fetch AI-generated follow-up questions
@@ -65,6 +70,10 @@ export default function SurveyPage2({
     setFollowupAnswers((prev) => ({ ...prev, [qId]: value }));
   };
 
+  const setFreetext = (qId: string, value: string) => {
+    setFollowupFreetexts((prev) => ({ ...prev, [qId]: value }));
+  };
+
   const page2AnsweredCount = questions.filter((q) => followupAnswers[q.id]).length;
   // Global progress: 7 from page 1 (interest + Q1-6) + page 2 answers
   const globalCompleted = 7 + page2AnsweredCount;
@@ -74,14 +83,43 @@ export default function SurveyPage2({
   const handleSubmit = () => {
     if (!canSubmit) return;
     const formattedAnswers: Record<string, string> = {};
+    const formattedFreetexts: Record<string, string> = {};
     for (const q of questions) {
       formattedAnswers[q.id] = followupAnswers[q.id] || "";
+      formattedFreetexts[q.id] = followupFreetexts[q.id] || "";
     }
     onSubmit({
       followupQuestions: questions,
       followupAnswers: formattedAnswers,
+      followupFreetexts: formattedFreetexts,
       additionalComments,
     });
+  };
+
+  // Build previousAnswers context for hints (include page1 + page2 answers)
+  const previousAnswersForHints: Record<string, { likert: string; freetext: string }> = {
+    ...page1Answers,
+    ...Object.fromEntries(
+      Object.entries(followupAnswers)
+        .filter(([, v]) => v)
+        .map(([k, v]) => [k, { likert: v || "", freetext: followupFreetexts[k] || "" }])
+    ),
+  };
+
+  // Get starter sentences for a question based on likert value
+  const getStarters = (question: FollowupQuestion, likert: LikertValue | null): string[] => {
+    if (!likert || !question.starters) return [];
+    return question.starters[likert] || [];
+  };
+
+  // Get freetext guide label based on likert value
+  const getGuide = (likert: LikertValue | null) => {
+    if (!likert) return null;
+    if (likert === "strongly_agree" || likert === "agree") return { label: "賛成する理由を教えてください" };
+    if (likert === "strongly_disagree" || likert === "disagree") return { label: "反対する理由を教えてください" };
+    if (likert === "neutral") return { label: "どちらとも言えないと感じる理由を教えてください" };
+    if (likert === "dont_know") return { label: "わからないと感じる理由を教えてください" };
+    return null;
   };
 
   if (isLoading) {
@@ -118,28 +156,50 @@ export default function SurveyPage2({
       </div>
 
       {/* Follow-up Questions Q7-Q10 */}
-      {questions.map((question, index) => (
-        <section
-          key={question.id}
-          className="bg-white border border-border rounded-2xl p-5 sm:p-6"
-        >
-          <div className="mb-4">
-            <div className="flex gap-3 items-start">
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-accent/10 text-accent text-xs font-bold shrink-0 mt-0.5">
-                {index + 7}
-              </span>
-              <h3 className="text-[15px] font-semibold text-text leading-relaxed">
-                {question.text}
-              </h3>
-            </div>
-          </div>
+      {questions.map((question, index) => {
+        const hasLikert = !!followupAnswers[question.id];
 
-          <LikertScale
-            value={followupAnswers[question.id] || null}
-            onChange={(val) => setAnswer(question.id, val)}
-          />
-        </section>
-      ))}
+        return (
+          <section
+            key={question.id}
+            className="bg-white border border-border rounded-2xl p-5 sm:p-6"
+          >
+            <div className="mb-4">
+              <div className="flex gap-3 items-start">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-accent/10 text-accent text-xs font-bold shrink-0 mt-0.5">
+                  {index + 7}
+                </span>
+                <h3 className="text-[15px] font-semibold text-text leading-relaxed">
+                  {question.text}
+                </h3>
+              </div>
+            </div>
+
+            <div className={`${hasLikert ? "mb-5" : ""}`}>
+              <LikertScale
+                value={followupAnswers[question.id] || null}
+                onChange={(val) => setAnswer(question.id, val)}
+              />
+            </div>
+
+            {/* Free text with AI hints (shown after Likert selection) */}
+            {hasLikert && (
+              <div className="border-t border-border/60 pt-4">
+                <FreeTextWithHints
+                  questionId={question.id}
+                  likertAnswer={followupAnswers[question.id] || null}
+                  value={followupFreetexts[question.id] || ""}
+                  onChange={(val) => setFreetext(question.id, val)}
+                  previousAnswers={previousAnswersForHints}
+                  starterSentences={getStarters(question, followupAnswers[question.id] || null)}
+                  guide={getGuide(followupAnswers[question.id] || null)}
+                  hintSystemPrompt={question.hintSystemPrompt}
+                />
+              </div>
+            )}
+          </section>
+        );
+      })}
 
       {/* Additional Comments */}
       <section className="bg-white border border-border rounded-2xl p-5 sm:p-6">

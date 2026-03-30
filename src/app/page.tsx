@@ -78,6 +78,7 @@ export default function Home() {
   const handlePage2Submit = async (data: {
     followupQuestions: { id: string; text: string }[];
     followupAnswers: Record<string, string>;
+    followupFreetexts: Record<string, string>;
     additionalComments: string;
   }) => {
     setIsSubmitting(true);

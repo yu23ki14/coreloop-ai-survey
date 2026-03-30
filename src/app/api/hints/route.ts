@@ -12,17 +12,22 @@ export async function POST(req: NextRequest) {
       likertAnswer,
       currentText,
       previousAnswers,
+      hintSystemPrompt: customHintPrompt,
     }: {
       questionId: string;
       likertAnswer: string;
       currentText: string;
       previousAnswers: Record<string, { likert: string; freetext: string }>;
+      hintSystemPrompt?: string;
     } = body;
 
+    // Use predefined question's prompt, or custom prompt for AI-generated questions
     const question = SURVEY_QUESTIONS.find((q) => q.id === questionId);
-    if (!question) {
+    const systemPrompt = question?.hintSystemPrompt || customHintPrompt;
+
+    if (!systemPrompt) {
       return NextResponse.json(
-        { error: "Invalid question ID" },
+        { error: "Invalid question ID and no custom prompt provided" },
         { status: 400 }
       );
     }
@@ -33,7 +38,7 @@ export async function POST(req: NextRequest) {
         const q = SURVEY_QUESTIONS.find((sq) => sq.id === qId);
         const likertLabel =
           LIKERT_OPTIONS.find((o) => o.value === ans.likert)?.label || ans.likert;
-        return `${q?.id?.toUpperCase()}: ${likertLabel}${ans.freetext ? ` - "${ans.freetext}"` : ""}`;
+        return `${q?.id?.toUpperCase() || qId.toUpperCase()}: ${likertLabel}${ans.freetext ? ` - "${ans.freetext}"` : ""}`;
       })
       .join("\n");
 
@@ -51,7 +56,7 @@ ${prevAnswersFormatted || "（まだ他の設問には回答していません�
 
     const hint = await callOpenRouter(
       [
-        { role: "system", content: question.hintSystemPrompt },
+        { role: "system", content: systemPrompt },
         { role: "user", content: userMessage },
       ],
       { maxTokens: 256, temperature: 0.7 }

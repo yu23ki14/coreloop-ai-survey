@@ -30,12 +30,16 @@ CREATE TABLE IF NOT EXISTS responses (
   -- Q7-Q10 AI-generated follow-up questions and responses
   q7_text TEXT DEFAULT '',
   q7_likert TEXT CHECK (q7_likert IS NULL OR q7_likert IN ('strongly_agree','agree','neutral','disagree','strongly_disagree','dont_know')),
+  q7_freetext TEXT DEFAULT '',
   q8_text TEXT DEFAULT '',
   q8_likert TEXT CHECK (q8_likert IS NULL OR q8_likert IN ('strongly_agree','agree','neutral','disagree','strongly_disagree','dont_know')),
+  q8_freetext TEXT DEFAULT '',
   q9_text TEXT DEFAULT '',
   q9_likert TEXT CHECK (q9_likert IS NULL OR q9_likert IN ('strongly_agree','agree','neutral','disagree','strongly_disagree','dont_know')),
+  q9_freetext TEXT DEFAULT '',
   q10_text TEXT DEFAULT '',
   q10_likert TEXT CHECK (q10_likert IS NULL OR q10_likert IN ('strongly_agree','agree','neutral','disagree','strongly_disagree','dont_know')),
+  q10_freetext TEXT DEFAULT '',
 
   -- Final free text
   additional_comments TEXT DEFAULT '',

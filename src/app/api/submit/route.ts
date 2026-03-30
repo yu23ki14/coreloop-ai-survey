@@ -66,6 +66,9 @@ export async function POST(req: NextRequest) {
         if (data.followupAnswers?.[qId]) {
           row[`${qId}_likert`] = data.followupAnswers[qId] || null;
         }
+        if (data.followupFreetexts?.[qId] !== undefined) {
+          row[`${qId}_freetext`] = data.followupFreetexts[qId] || "";
+        }
       }
 
       const { error } = await supabase
