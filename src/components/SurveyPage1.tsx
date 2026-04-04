@@ -5,6 +5,7 @@ import { SURVEY_QUESTIONS, INTEREST_OPTIONS, INTEREST_REASONS, getFreetextGuide,
 import LikertScale from "./LikertScale";
 import FreeTextWithHints from "./FreeTextWithHints";
 import ProgressBar, { scrollToFirstUnanswered } from "./ProgressBar";
+import { Title, Typography } from "./Typography";
 
 const INTEREST_ID = "q-interest";
 
@@ -114,9 +115,9 @@ export default function SurveyPage1({
             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0 mt-0.5">
               0
             </span>
-            <h3 className="text-[15px] font-semibold text-text leading-relaxed">
+            <Title>
               オンライン広告詐欺の問題について、どの程度関心をお持ちですか？
-            </h3>
+            </Title>
           </div>
         </div>
 
@@ -142,9 +143,9 @@ export default function SurveyPage1({
                   }
                 `}
               >
-                <span className="text-[12px] sm:text-sm leading-tight">
+                <Typography size="small" className="leading-tight sm:text-sm">
                   {opt.label}
-                </span>
+                </Typography>
               </button>
             );
           })}
@@ -152,9 +153,9 @@ export default function SurveyPage1({
 
         {interestLevel !== null && (
           <div className="border-t border-border/60 pt-4 mt-5">
-            <p className="text-sm font-medium text-text mb-3">
+            <Typography as="p" size="regular" weight="bold" className="mb-3">
               この問題を知ったきっかけを教えてください（複数選択可）
-            </p>
+            </Typography>
             <div className="flex flex-wrap gap-2">
               {INTEREST_REASONS.map((reason) => {
                 const isSelected = interestReasons.includes(reason.value);
@@ -163,7 +164,7 @@ export default function SurveyPage1({
                     key={reason.value}
                     type="button"
                     onClick={() => toggleInterestReason(reason.value)}
-                    className={`px-3.5 py-2 rounded-lg border text-xs sm:text-sm font-medium transition-all
+                    className={`px-3.5 py-2 rounded-lg border text-sm font-medium transition-all
                       ${
                         isSelected
                           ? "bg-accent/10 text-accent border-accent shadow-sm"
@@ -205,9 +206,7 @@ export default function SurveyPage1({
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0 mt-0.5">
                   {index + 1}
                 </span>
-                <h3 className="text-[15px] font-semibold text-text leading-relaxed">
-                  {question.text}
-                </h3>
+                <Title>{question.text}</Title>
               </div>
             </div>
 
@@ -240,11 +239,11 @@ export default function SurveyPage1({
       {/* Submit */}
       <div className="flex flex-col items-center gap-3 pt-2 pb-4">
         {!canSubmit && (
-          <p className="text-sm text-text-muted text-center">
+          <Typography as="p" size="regular" muted className="text-center">
             全ての設問の選択式に回答すると次のページに進めます。
             <br />
-            <span className="text-xs">自由記述はスキップできます。</span>
-          </p>
+            <Typography as="span" size="small" muted>自由記述はスキップできます。</Typography>
+          </Typography>
         )}
         <button
           type="button"

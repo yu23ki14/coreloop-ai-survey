@@ -7,6 +7,7 @@ import SurveyPage1 from "@/components/SurveyPage1";
 import SurveyPage2 from "@/components/SurveyPage2";
 import Link from "next/link";
 import FraudEducationCarousel from "@/components/FraudEducationCarousel";
+import { Title, Typography } from "@/components/Typography";
 
 type SurveyState = "loading" | "intro" | "page1" | "page2" | "complete";
 
@@ -283,9 +284,9 @@ export default function Home() {
             {SURVEY_INTRO.title}
           </h1>
           {(state === "page1" || state === "page2") && (
-            <span className="text-xs text-text-muted bg-surface px-2.5 py-1 rounded-full">
+            <Typography size="small" muted className="bg-surface px-2.5 py-1 rounded-full">
               {state === "page1" ? "1" : "2"} / 2 ページ
-            </span>
+            </Typography>
           )}
         </div>
       </header>
@@ -301,7 +302,7 @@ export default function Home() {
         {/* Error banner */}
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start justify-between gap-3">
-            <p className="text-sm text-red-700">{error}</p>
+            <Typography as="p" size="regular" className="text-red-700">{error}</Typography>
             <button
               onClick={() => setError(null)}
               className="text-red-400 hover:text-red-600 shrink-0"
@@ -320,34 +321,34 @@ export default function Home() {
               <h2 className="text-2xl font-bold text-text">
                 {SURVEY_INTRO.subtitle}
               </h2>
-              <p className="text-sm text-text-muted">
+              <Typography as="p" size="regular" muted>
                 {SURVEY_INTRO.estimatedTime}
-              </p>
+              </Typography>
             </div>
 
             <FraudEducationCarousel />
 
             <div className="bg-white border border-border rounded-2xl p-6 space-y-4">
-              <div className="text-sm text-text-secondary leading-relaxed whitespace-pre-line">
+              <Typography as="div" size="regular" secondary className="whitespace-pre-line">
                 {SURVEY_INTRO.description}
-              </div>
+              </Typography>
               <hr className="border-border" />
               <div className="space-y-2">
                 <div className="flex items-start gap-2.5">
                   <svg className="w-4 h-4 text-text-muted shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
-                  <p className="text-xs text-text-muted leading-relaxed">
+                  <Typography as="p" size="small" muted>
                     {SURVEY_INTRO.privacyNote}
-                  </p>
+                  </Typography>
                 </div>
                 <div className="flex items-start gap-2.5">
                   <svg className="w-4 h-4 text-text-muted shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
-                  <p className="text-xs text-text-muted leading-relaxed">
+                  <Typography as="p" size="small" muted>
                     {SURVEY_INTRO.aiNote}
-                  </p>
+                  </Typography>
                 </div>
               </div>
             </div>
@@ -400,19 +401,17 @@ export default function Home() {
               <h2 className="text-2xl font-bold text-text">
                 ご回答ありがとうございました
               </h2>
-              <p className="text-text-secondary max-w-md mx-auto leading-relaxed">
+              <Typography as="p" size="regular" secondary className="max-w-md mx-auto">
                 いただいたご意見は、今後の熟議型世論調査での論点整理に活用させていただきます。
                 みなさまの声が、より良い政策づくりの一助となります。
-              </p>
+              </Typography>
             </div>
 
             <div className="bg-white border border-border rounded-2xl p-6 max-w-md mx-auto text-left space-y-3">
-              <p className="font-semibold text-text">
-                この取り組みを応援しませんか？
-              </p>
-              <p className="text-text-secondary leading-relaxed">
+              <Title as="p">この取り組みを応援しませんか？</Title>
+              <Typography as="p" size="regular" secondary>
                 本プロジェクトはクラウドファンディングで運営されています。熟議型世論調査の実現に向けて、ご支援いただけると幸いです。
-              </p>
+              </Typography>
               <a
                 href="https://camp-fire.jp/projects/930941/view"
                 target="_blank"

@@ -131,11 +131,11 @@ export default function FraudEducationCarousel() {
             <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
               {slide.icon}
             </div>
-            <h3 className="text-base font-bold text-text">{slide.title}</h3>
+            <span className="text-[15px] font-semibold text-text leading-relaxed">{slide.title}</span>
           </div>
-          <p className="text-sm text-text-secondary leading-relaxed">
+          <span className="text-sm font-normal text-text-secondary leading-relaxed block">
             {slide.body}
-          </p>
+          </span>
         </div>
 
         {/* Navigation arrows */}
@@ -173,7 +173,7 @@ export default function FraudEducationCarousel() {
             aria-label={`スライド ${i + 1}`}
           />
         ))}
-        <span className="text-xs text-text-muted ml-2">
+        <span className="text-sm font-normal text-text-muted leading-relaxed ml-2">
           {current + 1} / {SLIDES.length}
         </span>
       </div>

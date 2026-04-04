@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { LikertValue, FreetextGuide } from "@/lib/survey-data";
+import { Typography } from "./Typography";
 
 interface FreeTextWithHintsProps {
   questionId: string;
@@ -45,12 +46,10 @@ export default function FreeTextWithHints({
   // Fetch hint function
   const fetchHint = useCallback(
     async (text: string) => {
-      // Cancel any pending request
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
 
-      // Don't fetch if text hasn't meaningfully changed
       if (text === lastHintTextRef.current) return;
       lastHintTextRef.current = text;
 
@@ -76,7 +75,6 @@ export default function FreeTextWithHints({
         const data = await response.json();
 
         if (!controller.signal.aborted) {
-          // Fade transition
           setHintVisible(false);
           setTimeout(() => {
             setHint(data.hint);
@@ -94,7 +92,7 @@ export default function FreeTextWithHints({
         }
       }
     },
-    [questionId, likertAnswer, previousAnswers]
+    [questionId, questionText, likertAnswer, previousAnswers]
   );
 
   // Debounced hint trigger on text change
@@ -118,12 +116,10 @@ export default function FreeTextWithHints({
     }
   };
 
-  // Manual refresh button
   const handleManualRefresh = () => {
     fetchHint(value);
   };
 
-  // Starter sentence click
   const handleStarterClick = (sentence: string) => {
     onChange(sentence);
     setShowStarters(false);
@@ -157,14 +153,14 @@ export default function FreeTextWithHints({
       {/* Header */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-text-secondary">
+          <Typography size="regular" weight="bold" secondary>
             {guide?.label || "そう思う理由を教えてください"}
-            <span className="text-text-muted font-normal ml-1">（任意）</span>
-          </p>
+            <Typography as="span" size="regular" muted className="font-normal ml-1">（任意）</Typography>
+          </Typography>
           {value.length > 0 && (
-            <span className="text-xs text-text-muted tabular-nums">
+            <Typography size="small" muted className="tabular-nums">
               {value.length}文字
-            </span>
+            </Typography>
           )}
         </div>
       </div>
@@ -178,7 +174,7 @@ export default function FreeTextWithHints({
                 key={i}
                 type="button"
                 onClick={() => handleStarterClick(sentence)}
-                className="starter-chip text-left text-sm px-3.5 py-2.5 rounded-lg border border-border bg-surface hover:bg-surface-dark text-text-secondary leading-relaxed"
+                className="starter-chip text-left px-3.5 py-2.5 rounded-lg border border-border bg-surface hover:bg-surface-dark text-text-secondary leading-relaxed text-sm"
               >
                 {sentence}
               </button>
@@ -193,9 +189,9 @@ export default function FreeTextWithHints({
           <svg className="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-xs text-blue-600">
+          <Typography size="small" className="text-blue-600">
             このまま送信もできますが、自分の言葉で書き直したり書き足すとより良い回答になります
-          </p>
+          </Typography>
         </div>
       )}
 

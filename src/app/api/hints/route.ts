@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callOpenRouter } from "@/lib/openrouter";
-import { SURVEY_QUESTIONS, LIKERT_OPTIONS, FOLLOWUP_HINT_SYSTEM_PROMPT } from "@/lib/survey-data";
+import { SURVEY_QUESTIONS, LIKERT_OPTIONS, FOLLOWUP_HINT_SYSTEM_PROMPT, HINT_USER_MESSAGE_TEMPLATE } from "@/lib/survey-data";
 
 export const runtime = "edge";
 
@@ -48,12 +48,10 @@ export async function POST(req: NextRequest) {
       likertAnswer ||
       "未回答";
 
-    const userMessage = `回答者のこの設問への回答（リッカート尺度）: ${likertLabel}
-回答者のこれまでの全回答:
-${prevAnswersFormatted || "（まだ他の設問には回答していません）"}
-回答者の現在の自由記述: ${currentText || "（まだ何も書いていません）"}
-
-上記を踏まえ、回答者がさらに考えを深めるための問いかけを一文で提示してください。パッと読んで理解できる簡潔な文にしてください。`;
+    const userMessage = HINT_USER_MESSAGE_TEMPLATE
+      .replace("{{LIKERT_LABEL}}", likertLabel)
+      .replace("{{PREVIOUS_ANSWERS}}", prevAnswersFormatted || "（まだ他の設問には回答していません）")
+      .replace("{{CURRENT_TEXT}}", currentText || "（まだ何も書いていません）");
 
     const hint = await callOpenRouter(
       [

@@ -1,6 +1,7 @@
 "use client";
 
 import { LIKERT_SCALE_OPTIONS, DONT_KNOW_OPTION, type LikertValue } from "@/lib/survey-data";
+import { Typography } from "./Typography";
 
 interface LikertScaleProps {
   value: LikertValue | null;
@@ -60,9 +61,9 @@ export default function LikertScale({
               <span className="text-lg leading-none" aria-hidden="true">
                 {LIKERT_EMOJIS[option.value]}
               </span>
-              <span className="text-[12px] sm:text-sm leading-tight">
+              <Typography size="small" className="leading-tight sm:text-sm">
                 {option.label}
-              </span>
+              </Typography>
             </button>
           );
         })}
@@ -70,7 +71,7 @@ export default function LikertScale({
 
       {/* Separated "don't know" checkbox */}
       <label
-        className={`flex items-center gap-2 text-sm cursor-pointer select-none
+        className={`flex items-center gap-2 cursor-pointer select-none
           ${disabled ? "opacity-50 cursor-not-allowed" : ""}
         `}
       >
@@ -80,7 +81,6 @@ export default function LikertScale({
           disabled={disabled}
           onChange={() => {
             if (isDontKnow) {
-              // uncheck: clear the value (parent handles null)
               onChange(null as unknown as LikertValue);
             } else {
               onChange(DONT_KNOW_OPTION.value);
@@ -88,7 +88,7 @@ export default function LikertScale({
           }}
           className="w-4 h-4 rounded border-gray-300 text-gray-500 focus:ring-gray-400 accent-gray-500"
         />
-        <span className="text-text-muted">{DONT_KNOW_OPTION.label}</span>
+        <Typography size="regular" muted>{DONT_KNOW_OPTION.label}</Typography>
       </label>
     </div>
   );
