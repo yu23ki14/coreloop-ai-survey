@@ -36,8 +36,8 @@ interface TypographyProps {
 }
 
 const SIZE_CLASS: Record<TypographySize, string> = {
-  regular: "text-sm",
-  small: "text-xs",
+  regular: "text-[15px]",
+  small: "text-sm",
 };
 
 const WEIGHT_CLASS: Record<TypographyWeight, string> = {

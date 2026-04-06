@@ -143,7 +143,7 @@ export default function SurveyPage1({
                   }
                 `}
               >
-                <Typography size="small" className="leading-tight sm:text-sm">
+                <Typography size="small" className={`leading-tight !text-xs sm:!text-sm ${isSelected ? "!text-white !font-semibold" : ""}`}>
                   {opt.label}
                 </Typography>
               </button>

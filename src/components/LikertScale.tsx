@@ -61,7 +61,7 @@ export default function LikertScale({
               <span className="text-lg leading-none" aria-hidden="true">
                 {LIKERT_EMOJIS[option.value]}
               </span>
-              <Typography size="small" className="leading-tight sm:text-sm">
+              <Typography size="small" className={`leading-tight !text-xs sm:!text-sm ${isSelected ? "!text-white !font-semibold" : ""}`}>
                 {option.label}
               </Typography>
             </button>
