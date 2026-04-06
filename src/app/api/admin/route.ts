@@ -8,6 +8,14 @@ function checkAuth(req: NextRequest): boolean {
   return token === process.env.ADMIN_PASSWORD;
 }
 
+interface AnswerRow {
+  question_id: string;
+  question_text: string | null;
+  likert: string | null;
+  freetext: string | null;
+  is_followup: boolean | null;
+}
+
 export async function GET(req: NextRequest) {
   if (!checkAuth(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,43 +25,112 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const format = url.searchParams.get("format");
 
-  // Fetch all responses
-  const { data: responses, error } = await supabase
-    .from("responses")
+  // Fetch all sessions
+  const { data: sessions, error: sessionsError } = await supabase
+    .from("sessions")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("Admin fetch error:", error);
+  if (sessionsError) {
+    console.error("Admin fetch error:", sessionsError);
     return NextResponse.json(
       { error: "データの取得に失敗しました。" },
       { status: 500 }
     );
   }
 
+  // Fetch all answers
+  const { data: allAnswers, error: answersError } = await supabase
+    .from("answers")
+    .select("*")
+    .order("question_id");
+
+  if (answersError) {
+    console.error("Admin answers fetch error:", answersError);
+    return NextResponse.json(
+      { error: "データの取得に失敗しました。" },
+      { status: 500 }
+    );
+  }
+
+  // Group answers by session_id
+  const answersBySession: Record<string, AnswerRow[]> = {};
+  for (const a of allAnswers || []) {
+    if (!answersBySession[a.session_id]) {
+      answersBySession[a.session_id] = [];
+    }
+    answersBySession[a.session_id].push(a);
+  }
+
   if (format === "csv") {
-    // Generate CSV
-    if (!responses || responses.length === 0) {
+    if (!sessions || sessions.length === 0) {
       return new NextResponse("No data", { status: 200 });
     }
 
-    const headers = Object.keys(responses[0]);
+    // Collect all distinct question_ids for dynamic columns
+    const allQuestionIds = [
+      ...new Set((allAnswers || []).map((a) => a.question_id)),
+    ].sort();
+
+    // CSV headers: session fields + dynamic question columns
+    const sessionHeaders = [
+      "session_id",
+      "interest_level",
+      "interest_reasons",
+      "interest_other_text",
+      "additional_comments",
+      "page_completed",
+      "user_agent",
+      "created_at",
+      "completed_at",
+    ];
+    const questionHeaders = allQuestionIds.flatMap((qId) => [
+      `${qId}_question_text`,
+      `${qId}_likert`,
+      `${qId}_freetext`,
+    ]);
+    const headers = [...sessionHeaders, ...questionHeaders];
+
     const csvRows = [
       headers.join(","),
-      ...responses.map((row) =>
-        headers
-          .map((h) => {
-            const val = row[h];
-            if (val === null || val === undefined) return "";
+      ...sessions.map((s) => {
+        const answers = answersBySession[s.session_id] || [];
+        const answerMap: Record<string, AnswerRow> = {};
+        for (const a of answers) {
+          answerMap[a.question_id] = a;
+        }
+
+        const sessionVals = [
+          s.session_id,
+          s.interest_level ?? "",
+          JSON.stringify(s.interest_reasons || []),
+          s.interest_other_text || "",
+          s.additional_comments || "",
+          s.page_completed ?? "",
+          s.user_agent || "",
+          s.created_at || "",
+          s.completed_at || "",
+        ];
+
+        const questionVals = allQuestionIds.flatMap((qId) => {
+          const a = answerMap[qId];
+          return [
+            a?.question_text || "",
+            a?.likert || "",
+            a?.freetext || "",
+          ];
+        });
+
+        return [...sessionVals, ...questionVals]
+          .map((val) => {
             const str = String(val);
-            // Escape CSV fields
             if (str.includes(",") || str.includes('"') || str.includes("\n")) {
               return `"${str.replace(/"/g, '""')}"`;
             }
             return str;
           })
-          .join(",")
-      ),
+          .join(",");
+      }),
     ];
 
     return new NextResponse(csvRows.join("\n"), {
@@ -64,47 +141,43 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Return JSON with summary stats
-  const total = responses?.length || 0;
-  const completed = responses?.filter((r) => r.page_completed === 2).length || 0;
-  const page1Only = responses?.filter((r) => r.page_completed === 1).length || 0;
+  // JSON response with summary stats
+  const total = sessions?.length || 0;
+  const completed =
+    sessions?.filter((r) => r.page_completed === 2).length || 0;
+  const page1Only =
+    sessions?.filter((r) => r.page_completed === 1).length || 0;
 
-  // Calculate Likert distributions for Q1-Q6
+  // Likert distributions for base questions
   const likertDistributions: Record<string, Record<string, number>> = {};
-  for (let i = 1; i <= 6; i++) {
-    const qId = `q${i}`;
-    const dist: Record<string, number> = {};
-    for (const r of responses || []) {
-      const val = r[`${qId}_likert`];
-      if (val) {
-        dist[val] = (dist[val] || 0) + 1;
+  for (const a of allAnswers || []) {
+    if (!a.is_followup && a.likert) {
+      if (!likertDistributions[a.question_id]) {
+        likertDistributions[a.question_id] = {};
       }
+      likertDistributions[a.question_id][a.likert] =
+        (likertDistributions[a.question_id][a.likert] || 0) + 1;
     }
-    likertDistributions[qId] = dist;
   }
 
-  // Collect Q7-Q10 data
-  const followupData: Record<
-    string,
-    { text: string; likert: string }[]
-  > = { q7: [], q8: [], q9: [], q10: [] };
-  for (const r of responses || []) {
-    for (let i = 7; i <= 10; i++) {
-      const qId = `q${i}`;
-      if (r[`${qId}_text`] && r[`${qId}_likert`]) {
-        followupData[qId].push({
-          text: r[`${qId}_text`],
-          likert: r[`${qId}_likert`],
-        });
-      }
+  // Followup data
+  const followupData: { question_id: string; question_text: string; likert: string; freetext: string }[] = [];
+  for (const a of allAnswers || []) {
+    if (a.is_followup && a.question_text && a.likert) {
+      followupData.push({
+        question_id: a.question_id,
+        question_text: a.question_text,
+        likert: a.likert,
+        freetext: a.freetext || "",
+      });
     }
   }
 
   // Interest level distribution
   const interestDist: Record<string, number> = {};
-  for (const r of responses || []) {
-    if (r.interest_level) {
-      const key = String(r.interest_level);
+  for (const s of sessions || []) {
+    if (s.interest_level) {
+      const key = String(s.interest_level);
       interestDist[key] = (interestDist[key] || 0) + 1;
     }
   }
@@ -119,6 +192,7 @@ export async function GET(req: NextRequest) {
     interestDistribution: interestDist,
     likertDistributions,
     followupData,
-    responses,
+    sessions,
+    answersBySession,
   });
 }

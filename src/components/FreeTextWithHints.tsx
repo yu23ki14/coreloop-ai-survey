@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { LikertValue, FreetextGuide } from "@/lib/survey-data";
+import { Typography } from "./Typography";
 
 interface FreeTextWithHintsProps {
   questionId: string;
+  questionText?: string;
   likertAnswer: LikertValue | null;
   value: string;
   onChange: (value: string) => void;
@@ -15,6 +17,7 @@ interface FreeTextWithHintsProps {
 
 export default function FreeTextWithHints({
   questionId,
+  questionText,
   likertAnswer,
   value,
   onChange,
@@ -25,12 +28,12 @@ export default function FreeTextWithHints({
   const [hint, setHint] = useState<string>("");
   const [isLoadingHint, setIsLoadingHint] = useState(false);
   const [showStarters, setShowStarters] = useState(true);
-  const [showEditEncouragement, setShowEditEncouragement] = useState(false);
   const [hintVisible, setHintVisible] = useState(true);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastHintTextRef = useRef<string>("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Hide starters once user has typed something
   useEffect(() => {
@@ -42,12 +45,10 @@ export default function FreeTextWithHints({
   // Fetch hint function
   const fetchHint = useCallback(
     async (text: string) => {
-      // Cancel any pending request
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
 
-      // Don't fetch if text hasn't meaningfully changed
       if (text === lastHintTextRef.current) return;
       lastHintTextRef.current = text;
 
@@ -61,6 +62,7 @@ export default function FreeTextWithHints({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             questionId,
+            questionText,
             likertAnswer,
             currentText: text,
             previousAnswers,
@@ -72,7 +74,6 @@ export default function FreeTextWithHints({
         const data = await response.json();
 
         if (!controller.signal.aborted) {
-          // Fade transition
           setHintVisible(false);
           setTimeout(() => {
             setHint(data.hint);
@@ -90,7 +91,7 @@ export default function FreeTextWithHints({
         }
       }
     },
-    [questionId, likertAnswer, previousAnswers]
+    [questionId, questionText, likertAnswer, previousAnswers]
   );
 
   // Debounced hint trigger on text change
@@ -114,18 +115,13 @@ export default function FreeTextWithHints({
     }
   };
 
-  // Manual refresh button
-  const handleManualRefresh = () => {
-    fetchHint(value);
-  };
-
-  // Starter sentence click
   const handleStarterClick = (sentence: string) => {
     onChange(sentence);
     setShowStarters(false);
-    setShowEditEncouragement(true);
-    setTimeout(() => setShowEditEncouragement(false), 5000);
     textareaRef.current?.focus();
+    setTimeout(() => {
+      containerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 100);
     setTimeout(() => fetchHint(sentence), 500);
   };
 
@@ -146,35 +142,27 @@ export default function FreeTextWithHints({
   }, []);
 
   return (
-    <div className="space-y-3">
+    <div ref={containerRef} className="space-y-3">
       {/* Header */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-text-secondary">
+          <Typography size="regular" weight="bold" secondary>
             {guide?.label || "そう思う理由を教えてください"}
-            <span className="text-text-muted font-normal ml-1">（任意）</span>
-          </p>
-          {value.length > 0 && (
-            <span className="text-xs text-text-muted tabular-nums">
-              {value.length}文字
-            </span>
-          )}
+            <Typography as="span" size="regular" muted className="font-normal ml-1">（任意）</Typography>
+          </Typography>
         </div>
       </div>
 
       {/* Starter sentences */}
       {showStarters && likertAnswer && (
         <div className="space-y-1.5">
-          <p className="text-xs text-text-muted">
-            クリックして回答を始められます：
-          </p>
           <div className="flex flex-col gap-1.5">
             {starterSentences.map((sentence, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => handleStarterClick(sentence)}
-                className="starter-chip text-left text-sm px-3.5 py-2.5 rounded-lg border border-border bg-surface hover:bg-surface-dark text-text-secondary leading-relaxed"
+                className="starter-chip text-left px-3.5 py-2.5 rounded-lg border border-border bg-surface hover:bg-surface-dark text-text-secondary leading-relaxed text-sm"
               >
                 {sentence}
               </button>
@@ -183,17 +171,7 @@ export default function FreeTextWithHints({
         </div>
       )}
 
-      {/* Encouragement micro-copy */}
-      {showEditEncouragement && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100">
-          <svg className="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-xs text-blue-600">
-            このまま送信もできますが、自分の言葉で書き直したり書き足すとより良い回答になります
-          </p>
-        </div>
-      )}
+
 
       {/* Textarea */}
       <textarea
@@ -228,27 +206,6 @@ export default function FreeTextWithHints({
                 <span className="inline-block w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
               )}
             </span>
-            <button
-              type="button"
-              onClick={handleManualRefresh}
-              disabled={isLoadingHint}
-              className="text-xs text-amber-600 hover:text-amber-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
-            >
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              別のヒント
-            </button>
           </div>
           <p
             className={`text-sm text-amber-900/80 leading-relaxed transition-all duration-300 ${

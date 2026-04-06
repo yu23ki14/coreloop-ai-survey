@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
+import { SURVEY_QUESTIONS } from "@/lib/survey-data";
+
+export const runtime = "edge";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,69 +19,101 @@ export async function POST(req: NextRequest) {
     const supabase = createAdminClient();
 
     if (page === 1) {
-      // Upsert page 1 data
-      const row: Record<string, unknown> = {
-        session_id: sessionId,
-        interest_level: data.interestLevel,
-        page_completed: 1,
-        user_agent: data.userAgent || "",
-      };
+      // Upsert session
+      const { error: sessionError } = await supabase.from("sessions").upsert(
+        {
+          session_id: sessionId,
+          interest_level: data.interestLevel,
+          interest_reasons: data.interestReasons || [],
+          interest_other_text: data.interestOtherText || "",
+          page_completed: 1,
+          user_agent: data.userAgent || "",
+        },
+        { onConflict: "session_id" }
+      );
 
-      // Add Q1-Q6 answers
-      for (let i = 1; i <= 6; i++) {
-        const qId = `q${i}`;
-        if (data.answers?.[qId]) {
-          row[`${qId}_likert`] = data.answers[qId].likert || null;
-          row[`${qId}_freetext`] = data.answers[qId].freetext || "";
-        }
+      if (sessionError) {
+        console.error("Session upsert error:", sessionError);
+        return NextResponse.json(
+          { error: "回答の保存に失敗しました。" },
+          { status: 500 }
+        );
       }
 
-      const { error } = await supabase.from("responses").upsert(row, {
-        onConflict: "session_id",
+      // Bulk upsert answers for Q1-QN
+      const answerRows = Object.entries(
+        data.answers as Record<string, { likert: string; freetext: string }>
+      ).map(([qId, ans]) => {
+        const question = SURVEY_QUESTIONS.find((q) => q.id === qId);
+        return {
+          session_id: sessionId,
+          question_id: qId,
+          question_text: question?.text || "",
+          likert: ans.likert || null,
+          freetext: ans.freetext || "",
+          is_followup: false,
+        };
       });
 
-      if (error) {
-        console.error("Supabase insert error:", error);
-        return NextResponse.json(
-          { error: "回答の保存に失敗しました。" },
-          { status: 500 }
-        );
+      if (answerRows.length > 0) {
+        const { error: answersError } = await supabase
+          .from("answers")
+          .upsert(answerRows, { onConflict: "session_id,question_id" });
+
+        if (answersError) {
+          console.error("Answers upsert error:", answersError);
+          return NextResponse.json(
+            { error: "回答の保存に失敗しました。" },
+            { status: 500 }
+          );
+        }
       }
     } else if (page === 2) {
-      // Update with page 2 data
-      const row: Record<string, unknown> = {
-        page_completed: 2,
-        completed_at: new Date().toISOString(),
-        additional_comments: data.additionalComments || "",
-      };
-
-      // Add Q7-Q10
-      for (let i = 7; i <= 10; i++) {
-        const qId = `q${i}`;
-        if (data.followupQuestions) {
-          const q = data.followupQuestions.find(
-            (fq: { id: string }) => fq.id === qId
-          );
-          if (q) {
-            row[`${qId}_text`] = q.text || "";
-          }
-        }
-        if (data.followupAnswers?.[qId]) {
-          row[`${qId}_likert`] = data.followupAnswers[qId] || null;
-        }
-      }
-
-      const { error } = await supabase
-        .from("responses")
-        .update(row)
+      // Update session as completed
+      const { error: sessionError } = await supabase
+        .from("sessions")
+        .update({
+          page_completed: 2,
+          completed_at: new Date().toISOString(),
+          additional_comments: data.additionalComments || "",
+        })
         .eq("session_id", sessionId);
 
-      if (error) {
-        console.error("Supabase update error:", error);
+      if (sessionError) {
+        console.error("Session update error:", sessionError);
         return NextResponse.json(
           { error: "回答の保存に失敗しました。" },
           { status: 500 }
         );
+      }
+
+      // Bulk upsert followup answers
+      const followupQuestions: { id: string; text: string }[] =
+        data.followupQuestions || [];
+      const followupAnswers: Record<string, { likert: string; freetext: string }> =
+        data.followupAnswers || {};
+
+      const answerRows = followupQuestions.map((fq) => ({
+        session_id: sessionId,
+        question_id: fq.id,
+        question_text: fq.text || "",
+        likert: followupAnswers[fq.id]?.likert || null,
+        freetext: followupAnswers[fq.id]?.freetext || "",
+        is_followup: true,
+      }));
+
+      if (answerRows.length > 0) {
+        const { error: answersError } = await supabase
+          .from("answers")
+          .upsert(answerRows, { onConflict: "session_id,question_id" });
+
+        if (answersError) {
+          console.error("Followup answers upsert error:", answersError);
+          return NextResponse.json(
+            { error: "回答の保存に失敗しました。" },
+            { status: 500 }
+          );
+        }
       }
     }
 

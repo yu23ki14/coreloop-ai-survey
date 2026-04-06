@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 interface Slide {
   title: string;
@@ -39,25 +39,91 @@ const SLIDES: Slide[] = [
   },
 ];
 
+const AUTOPLAY_INTERVAL = 5000;
+const SWIPE_THRESHOLD = 50;
+
 export default function FraudEducationCarousel() {
   const [current, setCurrent] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const isPausedRef = useRef(false);
+
+  // Check prefers-reduced-motion
+  useEffect(() => {
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
+  // Autoplay
+  const resetTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (prefersReducedMotion) return;
+    timerRef.current = setInterval(() => {
+      if (!isPausedRef.current) {
+        setCurrent((prev) => (prev + 1) % SLIDES.length);
+      }
+    }, AUTOPLAY_INTERVAL);
+  }, [prefersReducedMotion]);
+
+  useEffect(() => {
+    resetTimer();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [resetTimer]);
 
   const goTo = useCallback((index: number) => {
     setCurrent(index);
-  }, []);
+    resetTimer();
+  }, [resetTimer]);
 
   const next = useCallback(() => {
-    setCurrent((prev) => Math.min(prev + 1, SLIDES.length - 1));
-  }, []);
+    setCurrent((prev) => (prev + 1) % SLIDES.length);
+    resetTimer();
+  }, [resetTimer]);
 
   const prev = useCallback(() => {
-    setCurrent((prev) => Math.max(prev - 1, 0));
+    setCurrent((prev) => (prev - 1 + SLIDES.length) % SLIDES.length);
+    resetTimer();
+  }, [resetTimer]);
+
+  // Touch swipe handlers
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    isPausedRef.current = true;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    isPausedRef.current = false;
+    if (!touchStartRef.current) return;
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+    // Only trigger if horizontal swipe is dominant
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_THRESHOLD) {
+      if (dx < 0) next();
+      else prev();
+    }
+  }, [next, prev]);
+
+  const handleTouchCancel = useCallback(() => {
+    isPausedRef.current = false;
+    touchStartRef.current = null;
   }, []);
 
   const slide = SLIDES[current];
 
   return (
-    <div className="bg-white border border-border rounded-2xl overflow-hidden">
+    <div
+      className="bg-white border border-border rounded-2xl overflow-hidden"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
+    >
       {/* Slide content */}
       <div className="relative">
         <div className="p-6 space-y-4 min-h-[240px]">
@@ -65,36 +131,32 @@ export default function FraudEducationCarousel() {
             <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
               {slide.icon}
             </div>
-            <h3 className="text-base font-bold text-text">{slide.title}</h3>
+            <span className="text-[15px] font-semibold text-text leading-relaxed">{slide.title}</span>
           </div>
-          <p className="text-sm text-text-secondary leading-relaxed">
+          <span className="text-sm font-normal text-text-secondary leading-relaxed block">
             {slide.body}
-          </p>
+          </span>
         </div>
 
         {/* Navigation arrows */}
-        {current > 0 && (
-          <button
-            onClick={prev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 border border-border shadow-sm flex items-center justify-center text-text-muted hover:text-text hover:bg-white transition-colors"
-            aria-label="前へ"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-        )}
-        {current < SLIDES.length - 1 && (
-          <button
-            onClick={next}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 border border-border shadow-sm flex items-center justify-center text-text-muted hover:text-text hover:bg-white transition-colors"
-            aria-label="次へ"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        )}
+        <button
+          onClick={prev}
+          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 border border-border shadow-sm flex items-center justify-center text-text-muted hover:text-text hover:bg-white transition-colors"
+          aria-label="前へ"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <button
+          onClick={next}
+          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 border border-border shadow-sm flex items-center justify-center text-text-muted hover:text-text hover:bg-white transition-colors"
+          aria-label="次へ"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
       </div>
 
       {/* Dots + counter */}
@@ -111,7 +173,7 @@ export default function FraudEducationCarousel() {
             aria-label={`スライド ${i + 1}`}
           />
         ))}
-        <span className="text-xs text-text-muted ml-2">
+        <span className="text-sm font-normal text-text-muted leading-relaxed ml-2">
           {current + 1} / {SLIDES.length}
         </span>
       </div>

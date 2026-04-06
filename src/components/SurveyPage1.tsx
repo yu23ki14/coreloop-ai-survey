@@ -1,30 +1,65 @@
 "use client";
 
 import { useState } from "react";
-import { SURVEY_QUESTIONS, INTEREST_OPTIONS, getFreetextGuide, getStarterSentences, type LikertValue } from "@/lib/survey-data";
+import { SURVEY_QUESTIONS, INTEREST_OPTIONS, INTEREST_REASONS, getFreetextGuide, getStarterSentences, type LikertValue } from "@/lib/survey-data";
 import LikertScale from "./LikertScale";
 import FreeTextWithHints from "./FreeTextWithHints";
-import ProgressBar from "./ProgressBar";
+import ProgressBar, { scrollToFirstUnanswered } from "./ProgressBar";
+import { Title, Typography } from "./Typography";
+
+const INTEREST_ID = "q-interest";
 
 interface SurveyPage1Props {
   onSubmit: (data: {
     interestLevel: number;
+    interestReasons: string[];
+    interestOtherText: string;
     answers: Record<string, { likert: string; freetext: string }>;
   }) => void;
   isSubmitting: boolean;
+  onAnswerChange?: (questionId: string, data: { likert?: string; freetext?: string; questionText?: string }) => void;
+  onInterestChange?: (data: { interestLevel?: number; interestReasons?: string[]; interestOtherText?: string }) => void;
+  initialAnswers?: Record<string, { likert: string; freetext: string }>;
+  initialInterest?: { level: number | null; reasons: string[]; otherText: string };
 }
 
-export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props) {
-  const [interestLevel, setInterestLevel] = useState<number | null>(null);
+export default function SurveyPage1({
+  onSubmit,
+  isSubmitting,
+  onAnswerChange,
+  onInterestChange,
+  initialAnswers,
+  initialInterest,
+}: SurveyPage1Props) {
+  const [interestLevel, setInterestLevel] = useState<number | null>(initialInterest?.level ?? null);
+  const [interestReasons, setInterestReasons] = useState<string[]>(initialInterest?.reasons ?? []);
+  const [interestOtherText, setInterestOtherText] = useState(initialInterest?.otherText ?? "");
   const [answers, setAnswers] = useState<
     Record<string, { likert: LikertValue | null; freetext: string }>
-  >({});
+  >(() => {
+    if (!initialAnswers) return {};
+    const restored: Record<string, { likert: LikertValue | null; freetext: string }> = {};
+    for (const [k, v] of Object.entries(initialAnswers)) {
+      restored[k] = { likert: (v.likert as LikertValue) || null, freetext: v.freetext || "" };
+    }
+    return restored;
+  });
+
+  const toggleInterestReason = (value: string) => {
+    setInterestReasons((prev) => {
+      const next = prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value];
+      onInterestChange?.({ interestReasons: next });
+      return next;
+    });
+  };
 
   const setLikert = (qId: string, value: LikertValue) => {
     setAnswers((prev) => ({
       ...prev,
       [qId]: { ...prev[qId], likert: value, freetext: prev[qId]?.freetext || "" },
     }));
+    const question = SURVEY_QUESTIONS.find((q) => q.id === qId);
+    onAnswerChange?.(qId, { likert: value, questionText: question?.text });
   };
 
   const setFreetext = (qId: string, value: string) => {
@@ -32,18 +67,25 @@ export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props
       ...prev,
       [qId]: { ...prev[qId], likert: prev[qId]?.likert || null, freetext: value },
     }));
+    const question = SURVEY_QUESTIONS.find((q) => q.id === qId);
+    onAnswerChange?.(qId, { freetext: value, questionText: question?.text });
   };
 
-  // Calculate progress (global: interest + Q1-6 + Q7-10 = 11)
-  const totalRequired = 11;
-  const completedCount =
-    (interestLevel ? 1 : 0) +
-    SURVEY_QUESTIONS.filter((q) => answers[q.id]?.likert).length;
+  const progressDots = [
+    { id: INTEREST_ID, answered: interestLevel !== null },
+    ...SURVEY_QUESTIONS.map((q) => ({
+      id: `q-${q.id}`,
+      answered: !!answers[q.id]?.likert,
+    })),
+  ];
 
   const canSubmit = interestLevel !== null && SURVEY_QUESTIONS.every((q) => answers[q.id]?.likert);
 
   const handleSubmit = () => {
-    if (!canSubmit || !interestLevel) return;
+    if (!canSubmit || !interestLevel) {
+      scrollToFirstUnanswered(progressDots);
+      return;
+    }
     const formattedAnswers: Record<string, { likert: string; freetext: string }> = {};
     for (const q of SURVEY_QUESTIONS) {
       formattedAnswers[q.id] = {
@@ -51,7 +93,7 @@ export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props
         freetext: answers[q.id]?.freetext || "",
       };
     }
-    onSubmit({ interestLevel, answers: formattedAnswers });
+    onSubmit({ interestLevel, interestReasons, interestOtherText, answers: formattedAnswers });
   };
 
   // Build previousAnswers for hints context
@@ -63,37 +105,89 @@ export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props
 
   return (
     <div className="space-y-6">
-      {/* Progress */}
-      <ProgressBar
-        current={completedCount}
-        total={totalRequired}
-        label={`${completedCount}/${totalRequired} 問回答済み`}
-      />
+      {/* Progress dots */}
+      <ProgressBar dots={progressDots} />
 
       {/* Interest Level */}
-      <section className="bg-white border border-border rounded-2xl p-5 sm:p-6">
-        <h3 className="text-[15px] font-semibold text-text mb-1.5">
-          はじめに：この問題への関心度を教えてください
-        </h3>
-        <p className="text-sm text-text-muted mb-4">
-          SNSなどに表示される偽の広告による詐欺問題について、どの程度関心をお持ちですか？
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {INTEREST_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setInterestLevel(parseInt(opt.value))}
-              className={`likert-option px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
-                interestLevel === parseInt(opt.value)
-                  ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-white text-text-secondary border-border hover:border-primary/40 hover:text-primary"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+      <section id={INTEREST_ID} className="bg-white border border-border rounded-2xl p-5 sm:p-6">
+        <div className="mb-4">
+          <div className="flex gap-3 items-start">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0 mt-0.5">
+              0
+            </span>
+            <Title>
+              オンライン広告詐欺の問題について、どの程度関心をお持ちですか？
+            </Title>
+          </div>
         </div>
+
+        <div className="flex gap-1.5">
+          {INTEREST_OPTIONS.map((opt) => {
+            const isSelected = interestLevel === parseInt(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  const val = parseInt(opt.value);
+                  setInterestLevel(val);
+                  onInterestChange?.({ interestLevel: val });
+                }}
+                aria-label={opt.label}
+                aria-pressed={isSelected}
+                className={`flex-1 min-w-0 flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-lg border text-center font-medium transition-all
+                  ${
+                    isSelected
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white text-text-secondary border-border hover:border-blue-400/40 hover:text-blue-500"
+                  }
+                `}
+              >
+                <Typography size="small" className={`leading-tight !text-xs sm:!text-sm ${isSelected ? "!text-white !font-semibold" : ""}`}>
+                  {opt.label}
+                </Typography>
+              </button>
+            );
+          })}
+        </div>
+
+        {interestLevel !== null && (
+          <div className="border-t border-border/60 pt-4 mt-5">
+            <Typography as="p" size="regular" weight="bold" className="mb-3">
+              この問題を知ったきっかけを教えてください（複数選択可）
+            </Typography>
+            <div className="flex flex-wrap gap-2">
+              {INTEREST_REASONS.map((reason) => {
+                const isSelected = interestReasons.includes(reason.value);
+                return (
+                  <button
+                    key={reason.value}
+                    type="button"
+                    onClick={() => toggleInterestReason(reason.value)}
+                    className={`px-3.5 py-2 rounded-lg border text-sm font-medium transition-all
+                      ${
+                        isSelected
+                          ? "bg-accent/10 text-accent border-accent shadow-sm"
+                          : "bg-white text-text-secondary border-border hover:border-accent/40 hover:text-accent"
+                      }
+                    `}
+                  >
+                    {reason.label}
+                  </button>
+                );
+              })}
+            </div>
+            {interestReasons.includes("other") && (
+              <textarea
+                value={interestOtherText}
+                onChange={(e) => setInterestOtherText(e.target.value)}
+                placeholder="きっかけを教えてください"
+                className="mt-3 w-full rounded-lg border border-border p-3 text-sm text-text placeholder:text-text-muted/50 focus:outline-none focus:border-primary/40 resize-none"
+                rows={2}
+              />
+            )}
+          </div>
+        )}
       </section>
 
       {/* Questions Q1-Q6 */}
@@ -103,18 +197,16 @@ export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props
         return (
           <section
             key={question.id}
+            id={`q-${question.id}`}
             className="bg-white border border-border rounded-2xl p-5 sm:p-6"
           >
             {/* Question header */}
             <div className="mb-4">
-              <p className="text-xs text-text-muted mb-2">{question.description}</p>
               <div className="flex gap-3 items-start">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0 mt-0.5">
                   {index + 1}
                 </span>
-                <h3 className="text-[15px] font-semibold text-text leading-relaxed">
-                  {question.text}
-                </h3>
+                <Title>{question.text}</Title>
               </div>
             </div>
 
@@ -147,16 +239,16 @@ export default function SurveyPage1({ onSubmit, isSubmitting }: SurveyPage1Props
       {/* Submit */}
       <div className="flex flex-col items-center gap-3 pt-2 pb-4">
         {!canSubmit && (
-          <p className="text-sm text-text-muted text-center">
+          <Typography as="p" size="regular" muted className="text-center">
             全ての設問の選択式に回答すると次のページに進めます。
             <br />
-            <span className="text-xs">自由記述はスキップできます。</span>
-          </p>
+            <Typography as="span" size="small" muted>自由記述はスキップできます。</Typography>
+          </Typography>
         )}
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={!canSubmit || isSubmitting}
+          disabled={isSubmitting}
           className={`px-10 py-3.5 rounded-xl text-base font-semibold transition-all ${
             canSubmit && !isSubmitting
               ? "bg-primary text-white hover:bg-primary-light shadow-md hover:shadow-lg active:scale-[0.98]"

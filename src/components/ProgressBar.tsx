@@ -1,27 +1,47 @@
 "use client";
 
-interface ProgressBarProps {
-  current: number;
-  total: number;
-  label?: string;
+export interface ProgressDot {
+  id: string;
+  answered: boolean;
 }
 
-export default function ProgressBar({ current, total, label }: ProgressBarProps) {
-  const percentage = Math.round((current / total) * 100);
+export function scrollToFirstUnanswered(dots: ProgressDot[]): void {
+  const first = dots.find((d) => !d.answered);
+  if (first) {
+    document.getElementById(first.id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}
+
+interface ProgressBarProps {
+  dots: ProgressDot[];
+}
+
+export default function ProgressBar({ dots }: ProgressBarProps) {
+  const handleClick = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
 
   return (
-    <div className="w-full">
-      {label && (
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-xs text-text-muted">{label}</span>
-          <span className="text-xs text-text-muted">{percentage}%</span>
-        </div>
-      )}
-      <div className="w-full h-1.5 bg-surface-dark rounded-full overflow-hidden">
-        <div
-          className="progress-bar h-full bg-accent rounded-full"
-          style={{ width: `${percentage}%` }}
-        />
+    <div className="sticky top-[52px] z-10 bg-gray-50 py-2.5 -mt-6 sm:-mt-8">
+      <div className="flex items-center justify-center gap-2 flex-wrap">
+        {dots.map((dot, i) => (
+          <button
+            key={dot.id}
+            type="button"
+            onClick={() => handleClick(dot.id)}
+            aria-label={`問${i + 1}${dot.answered ? "（回答済み）" : "（未回答）"}`}
+            className={`w-5 h-5 rounded-full border-2 transition-all shrink-0
+              ${
+                dot.answered
+                  ? "bg-green-500 border-green-500"
+                  : "bg-white border-gray-300"
+              }
+            `}
+          />
+        ))}
       </div>
     </div>
   );

@@ -1,11 +1,12 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "./database.types";
 
 // Lazy-initialized client for client-side usage
-let _supabase: SupabaseClient | null = null;
+let _supabase: SupabaseClient<Database> | null = null;
 
 export function getSupabase() {
   if (!_supabase) {
-    _supabase = createClient(
+    _supabase = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
@@ -15,7 +16,7 @@ export function getSupabase() {
 
 // Server-side client with service role key for admin operations
 export function createAdminClient() {
-  return createClient(
+  return createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );

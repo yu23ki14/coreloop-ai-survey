@@ -38,7 +38,7 @@ export async function callOpenRouter(
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       "HTTP-Referer": process.env.NEXT_PUBLIC_SUPABASE_URL || "https://citizen-survey.vercel.app",
-      "X-Title": "市民意識調査 / Citizen Survey",
+      "X-Title": "Citizen Survey",
     },
     body: JSON.stringify({
       model: MODEL,
