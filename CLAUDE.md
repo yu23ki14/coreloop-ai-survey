@@ -41,7 +41,7 @@ supabase gen types typescript --local > src/lib/database.types.ts  # Regenerate 
 
 ### Flow
 
-`Intro (carousel) → Page 1 (interest + Q1-Q6) → Page 2 (AI-generated follow-ups) → Complete (with crowdfunding CTA)`
+`Intro (carousel) → Page 1 (interest + Q1-Q13) → Page 2 (AI-generated follow-ups) → Complete (with crowdfunding CTA)`
 
 ### Key architectural decisions
 

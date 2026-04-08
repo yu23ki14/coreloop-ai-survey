@@ -45,7 +45,7 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "q1-6" | "q7-10" | "responses"
+    "overview" | "q1-13" | "q14-18" | "responses"
   >("overview");
 
   const fetchData = useCallback(async () => {
@@ -199,8 +199,8 @@ export default function AdminPage() {
           {(
             [
               ["overview", "概要"],
-              ["q1-6", "Q1-Q6 詳細"],
-              ["q7-10", "Q7-Q10 詳細"],
+              ["q1-13", "Q1-Q13 詳細"],
+              ["q14-18", "Q14-Q18 詳細"],
               ["responses", "個別回答"],
             ] as const
           ).map(([key, label]) => (
@@ -250,9 +250,9 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Q1-Q6 Likert Summary */}
+            {/* Q1-Q13 Likert Summary */}
             <div className="bg-white border border-border rounded-xl p-6">
-              <h3 className="font-semibold text-text mb-4">Q1-Q6 回答分布</h3>
+              <h3 className="font-semibold text-text mb-4">Q1-Q13 回答分布</h3>
               <div className="space-y-4">
                 {SURVEY_QUESTIONS.map((q, i) => {
                   const dist = data.likertDistributions[q.id] || {};
@@ -301,7 +301,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {activeTab === "q1-6" && (
+        {activeTab === "q1-13" && (
           <div className="space-y-6">
             {SURVEY_QUESTIONS.map((q, i) => {
               const dist = data.likertDistributions[q.id] || {};
@@ -369,14 +369,14 @@ export default function AdminPage() {
           </div>
         )}
 
-        {activeTab === "q7-10" && (
+        {activeTab === "q14-18" && (
           <div className="space-y-6">
             <div className="bg-surface border border-border rounded-xl p-5">
               <p className="text-sm text-text-secondary">
-                Q7-Q10は回答者ごとにAIが生成した質問です。質問文と回答の組み合わせを表示します。
+                Q14-Q18は回答者ごとにAIが生成した質問です。質問文と回答の組み合わせを表示します。
               </p>
             </div>
-            {["q7", "q8", "q9", "q10"].map((qId) => {
+            {["q14", "q15", "q16", "q17", "q18"].map((qId) => {
               const entries = data.followupData[qId] || [];
               // Group by question text
               const grouped: Record<string, Record<string, number>> = {};

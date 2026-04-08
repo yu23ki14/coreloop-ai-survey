@@ -8,7 +8,7 @@ import {
 
 const FALLBACK_QUESTIONS = [
   {
-    id: "q7",
+    id: "q14",
     text: "テクノロジー企業は、政府よりも市民の安全を守る能力が高いと思いますか？",
     starterSentences: {
       agree: [
@@ -40,7 +40,7 @@ const FALLBACK_QUESTIONS = [
     },
   },
   {
-    id: "q8",
+    id: "q15",
     text: "多少の不便や制約があっても、詐欺被害を未然に防ぐための規制は必要だと思いますか？",
     starterSentences: {
       agree: [
@@ -72,7 +72,7 @@ const FALLBACK_QUESTIONS = [
     },
   },
   {
-    id: "q9",
+    id: "q16",
     text: "インターネット上の問題には、既存の法律の枠組みでは十分に対処できないと思いますか？",
     starterSentences: {
       agree: [
@@ -104,7 +104,7 @@ const FALLBACK_QUESTIONS = [
     },
   },
   {
-    id: "q10",
+    id: "q17",
     text: "詐欺被害が起きてから対処するよりも、事前に厳しく規制する方が社会全体のコストは低いと思いますか？",
     starterSentences: {
       agree: [
@@ -136,7 +136,7 @@ const FALLBACK_QUESTIONS = [
     },
   },
   {
-    id: "q11",
+    id: "q18",
     text: "オンライン詐欺の被害に遭うのは、個人の注意不足よりも社会の仕組みの問題だと思いますか？",
     starterSentences: {
       agree: [

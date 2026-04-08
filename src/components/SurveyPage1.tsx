@@ -246,7 +246,7 @@ export default function SurveyPage1({
         )}
       </section>
 
-      {/* Questions Q1-Q6 */}
+      {/* Questions Q1-Q13 */}
       {SURVEY_QUESTIONS.map((question, index) => {
         const hasLikert = !!answers[question.id]?.likert;
 
