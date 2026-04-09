@@ -74,7 +74,7 @@ const SLIDES: Slide[] = [
   },
 ];
 
-const AUTOPLAY_INTERVAL = 5000;
+const AUTOPLAY_INTERVAL = 10000;
 const SWIPE_THRESHOLD = 50;
 
 export default function FraudEducationCarousel() {
@@ -171,7 +171,7 @@ export default function FraudEducationCarousel() {
     >
       {/* Slide content */}
       <div className="relative">
-        <div className="p-6 space-y-4 min-h-[240px]">
+        <div className="px-12 py-6 space-y-4 min-h-[240px]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
               {slide.icon}
@@ -189,7 +189,7 @@ export default function FraudEducationCarousel() {
         <button
           type="button"
           onClick={prev}
-          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 border border-border shadow-sm flex items-center justify-center text-text-muted hover:text-text hover:bg-white transition-colors"
+          className="absolute left-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 border border-border shadow-sm flex items-center justify-center text-text-muted hover:text-text hover:bg-white transition-colors"
           aria-label="前へ"
         >
           <svg
@@ -209,7 +209,7 @@ export default function FraudEducationCarousel() {
         <button
           type="button"
           onClick={next}
-          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 border border-border shadow-sm flex items-center justify-center text-text-muted hover:text-text hover:bg-white transition-colors"
+          className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 border border-border shadow-sm flex items-center justify-center text-text-muted hover:text-text hover:bg-white transition-colors"
           aria-label="次へ"
         >
           <svg

@@ -250,7 +250,7 @@ export default function SurveyPage2({
             <div className="mb-4">
               <div className="flex gap-3 items-start">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-accent/10 text-accent text-xs font-bold shrink-0 mt-0.5">
-                  {index + 7}
+                  {index + 14}
                 </span>
                 <Title>{question.text}</Title>
               </div>

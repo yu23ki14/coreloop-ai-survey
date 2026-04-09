@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import CompletePage from "@/components/CompletePage";
 import FraudEducationCarousel from "@/components/FraudEducationCarousel";
 import SurveyPage1 from "@/components/SurveyPage1";
 import SurveyPage2 from "@/components/SurveyPage2";
@@ -450,52 +451,7 @@ export default function Home() {
 
         {/* Complete */}
         {state === "complete" && (
-          <div className="text-center py-20 space-y-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-50 border-2 border-green-200">
-              <svg
-                className="w-8 h-8 text-success"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <div className="space-y-3">
-              <h2 className="text-2xl font-bold text-text">
-                ご回答ありがとうございました
-              </h2>
-              <Typography
-                as="p"
-                size="regular"
-                secondary
-                className="max-w-md mx-auto"
-              >
-                いただいたご意見は、今後の熟議型世論調査での論点整理に活用させていただきます。
-                みなさまの声が、より良い政策づくりの一助となります。
-              </Typography>
-            </div>
-
-            <div className="bg-white border border-border rounded-2xl p-6 max-w-md mx-auto text-left space-y-3">
-              <Title as="p">この取り組みを応援しませんか？</Title>
-              <Typography as="p" size="regular" secondary>
-                本プロジェクトはクラウドファンディングで運営されています。熟議型世論調査の実現に向けて、ご支援いただけると幸いです。
-              </Typography>
-              <a
-                href="https://camp-fire.jp/projects/930941/view"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block w-full text-center px-6 py-3 bg-primary text-white rounded-xl text-base font-semibold hover:bg-primary-light transition-all shadow-sm hover:shadow-md"
-              >
-                クラウドファンディングを見る
-              </a>
-            </div>
-          </div>
+          <CompletePage />
         )}
       </main>
 

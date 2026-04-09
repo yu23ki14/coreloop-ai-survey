@@ -3,11 +3,11 @@
 // ========================================================================
 
 export const LIKERT_SCALE_OPTIONS = [
-  { value: "strongly_agree", label: "強く同意" },
-  { value: "agree", label: "同意" },
-  { value: "neutral", label: "どちらでもない" },
-  { value: "disagree", label: "反対" },
   { value: "strongly_disagree", label: "強く反対" },
+  { value: "disagree", label: "反対" },
+  { value: "neutral", label: "どちらでもない" },
+  { value: "agree", label: "同意" },
+  { value: "strongly_agree", label: "強く同意" },
 ] as const;
 
 export const DONT_KNOW_OPTION = {

@@ -29,6 +29,7 @@ export default function FreeTextWithHints({
   const [isLoadingHint, setIsLoadingHint] = useState(false);
   const [showStarters, setShowStarters] = useState(true);
   const [hintVisible, setHintVisible] = useState(true);
+  const [hintUsed, setHintUsed] = useState(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastHintTextRef = useRef<string>("");
@@ -45,6 +46,8 @@ export default function FreeTextWithHints({
   // Fetch hint function
   const fetchHint = useCallback(
     async (text: string) => {
+      if (hintUsed) return;
+
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -74,6 +77,7 @@ export default function FreeTextWithHints({
         const data = await response.json();
 
         if (!controller.signal.aborted) {
+          setHintUsed(true);
           setHintVisible(false);
           setTimeout(() => {
             setHint(data.hint);
@@ -91,7 +95,7 @@ export default function FreeTextWithHints({
         }
       }
     },
-    [questionId, questionText, likertAnswer, previousAnswers],
+    [questionId, questionText, likertAnswer, previousAnswers, hintUsed],
   );
 
   // Debounced hint trigger on text change
