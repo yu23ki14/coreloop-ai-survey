@@ -112,24 +112,20 @@ export default function Home() {
               return;
             }
 
-            // page_completed === 0: restore to page1 with partial data
-            const hasAnyData =
-              session.interest_level || Object.keys(page1Answers).length > 0;
-
-            if (hasAnyData) {
-              setInitialInterest({
-                level: session.interest_level,
-                reasons: session.interest_reasons || [],
-                otherText: session.interest_other_text || "",
-              });
-              setInitialPage1Answers(
-                Object.keys(page1Answers).length > 0 ? page1Answers : undefined,
-              );
-              setState("page1");
-              return;
-            }
+            // page_completed === 0: session exists, user has already started
+            // Restore to page1 with any partial data (interest level, answers)
+            setInitialInterest({
+              level: session.interest_level,
+              reasons: session.interest_reasons || [],
+              otherText: session.interest_other_text || "",
+            });
+            setInitialPage1Answers(
+              Object.keys(page1Answers).length > 0 ? page1Answers : undefined,
+            );
+            setState("page1");
+            return;
           }
-          // page_completed === 2 or no session: show intro
+          // no session: show intro
         }
       } catch (err) {
         console.error("Session restore error:", err);
