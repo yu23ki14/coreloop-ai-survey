@@ -1,11 +1,12 @@
-"use client";
-
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Title, Typography } from "./Typography";
 
 interface Slide {
   title: string;
+  copy: string;
   body: string;
   icon: React.ReactNode;
+  image?: string;
+  imageAlt?: string;
 }
 
 const SLIDES: Slide[] = [
@@ -26,7 +27,10 @@ const SLIDES: Slide[] = [
         />
       </svg>
     ),
-    body: "SNSやウェブサイトに表示される偽の広告のことです。有名人の写真や名前を無断で使い、「必ず儲かる投資法」などと謳って、お金を騙し取る手口が急増しています。2025年の被害額は約1,274億円（前年比46%増）で過去最悪を記録しました。",
+    copy: "SNSやウェブサイトなどに表示される詐欺を目的とした広告のことです。",
+    image: "/add_example.jpg",
+    imageAlt: "実際の詐欺広告の例",
+    body: "偽の広告をクリックすると、詐欺サイトや投資詐欺グループのグループに誘導され、お金を騙し取られます。2025年の被害額は約1,274億円（前年比46%増）で過去最悪の被害を記録しており、多くの方々が被害にあっています。",
   },
   {
     title: "よくある手口",
@@ -51,7 +55,8 @@ const SLIDES: Slide[] = [
         />
       </svg>
     ),
-    body: "著名人になりすました投資勧誘広告、AIで生成されたディープフェイク動画、「期間限定」「今だけ無料」と焦らせる偽キャンペーンなど、巧妙な手口が使われています。LINEグループに誘導し、サクラが「儲かった」と煽る手口もあります。",
+    copy: "著名人の画像や動画を無断で使い「必ず儲かる」などと宣伝する投資勧誘広告や、「今だけ無料」と焦らせる偽キャンペーンなど巧妙な手口が使われています。",
+    body: "SNSのグループなどに誘導されると、グループでは詐欺集団側のサクラが「儲かった」などと宣伝し、偽の広告に騙された個人を誘導します。また、近年は生成AIで偽の動画を大量につくることができるようになっています。",
   },
   {
     title: "なぜ対策が必要？",
@@ -70,183 +75,42 @@ const SLIDES: Slide[] = [
         />
       </svg>
     ),
-    body: "現在の日本では対応が複数の省庁にまたがり、プラットフォーム事業者への規制も十分ではありません。この調査では、どのような対策をとるべきか、あなたの意見を聞かせてください。市民の声を集め、より良い政策づくりに活かします。",
+    copy: "詐欺犯罪グループだけでなく、海外を含む広告プラットフォームやSNSの運営会社なども複雑に絡む問題で、対策が難しいとされています。",
+    body: "手口の巧妙さから詐欺広告の掲載者やSNSグループに参加する犯人を特定することは難しいです。また、現在の法律で政府ができることは、運営会社に対して自主的な取組を求めることに限定されています。オンライン広告詐欺は海外でも問題になっており、台湾ではSNSなどの運営会社に詐欺広告の削除を義務付けるなどの新しい法律を制定しました。",
   },
 ];
 
-const AUTOPLAY_INTERVAL = 10000;
-const SWIPE_THRESHOLD = 50;
-
 export default function FraudEducationCarousel() {
-  const [current, setCurrent] = useState(0);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const isPausedRef = useRef(false);
-
-  // Check prefers-reduced-motion
-  useEffect(() => {
-    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setPrefersReducedMotion(mql.matches);
-    const handler = (e: MediaQueryListEvent) =>
-      setPrefersReducedMotion(e.matches);
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
-  }, []);
-
-  // Autoplay
-  const resetTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (prefersReducedMotion) return;
-    timerRef.current = setInterval(() => {
-      if (!isPausedRef.current) {
-        setCurrent((prev) => (prev + 1) % SLIDES.length);
-      }
-    }, AUTOPLAY_INTERVAL);
-  }, [prefersReducedMotion]);
-
-  useEffect(() => {
-    resetTimer();
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [resetTimer]);
-
-  const goTo = useCallback(
-    (index: number) => {
-      setCurrent(index);
-      resetTimer();
-    },
-    [resetTimer],
-  );
-
-  const next = useCallback(() => {
-    setCurrent((prev) => (prev + 1) % SLIDES.length);
-    resetTimer();
-  }, [resetTimer]);
-
-  const prev = useCallback(() => {
-    setCurrent((prev) => (prev - 1 + SLIDES.length) % SLIDES.length);
-    resetTimer();
-  }, [resetTimer]);
-
-  // Touch swipe handlers
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartRef.current = {
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-    };
-    isPausedRef.current = true;
-  }, []);
-
-  const handleTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      isPausedRef.current = false;
-      if (!touchStartRef.current) return;
-      const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
-      const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
-      touchStartRef.current = null;
-      // Only trigger if horizontal swipe is dominant
-      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_THRESHOLD) {
-        if (dx < 0) next();
-        else prev();
-      }
-    },
-    [next, prev],
-  );
-
-  const handleTouchCancel = useCallback(() => {
-    isPausedRef.current = false;
-    touchStartRef.current = null;
-  }, []);
-
-  const slide = SLIDES[current];
-
   return (
-    <div
-      className="bg-white border border-border rounded-2xl overflow-hidden"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchCancel}
-    >
-      {/* Slide content */}
-      <div className="relative">
-        <div className="px-12 py-6 space-y-4 min-h-[240px]">
+    <div className="space-y-3">
+      {SLIDES.map((slide, i) => (
+        <div
+          key={i}
+          className="bg-white border border-border rounded-2xl p-4 space-y-3"
+        >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
               {slide.icon}
             </div>
-            <span className="text-[15px] font-semibold text-text leading-relaxed">
+            <Title>
               {slide.title}
-            </span>
+            </Title>
           </div>
-          <span className="text-sm font-normal text-text-secondary leading-relaxed block">
+          <Typography>
+            {slide.copy}
+          </Typography>
+          {slide.image && (
+            <img
+              src={slide.image}
+              alt={slide.imageAlt ?? ""}
+              className="w-full"
+            />
+          )}
+          <Typography size="small">
             {slide.body}
-          </span>
+          </Typography>
         </div>
-
-        {/* Navigation arrows */}
-        <button
-          type="button"
-          onClick={prev}
-          className="absolute left-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 border border-border shadow-sm flex items-center justify-center text-text-muted hover:text-text hover:bg-white transition-colors"
-          aria-label="前へ"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={next}
-          className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 border border-border shadow-sm flex items-center justify-center text-text-muted hover:text-text hover:bg-white transition-colors"
-          aria-label="次へ"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
-      </div>
-
-      {/* Dots + counter */}
-      <div className="flex items-center justify-center gap-2 pb-4">
-        {SLIDES.map((_, i) => (
-          <button
-            type="button"
-            key={i}
-            onClick={() => goTo(i)}
-            className={`w-2 h-2 rounded-full transition-all ${
-              i === current
-                ? "bg-accent w-5"
-                : "bg-border-dark hover:bg-text-muted"
-            }`}
-            aria-label={`スライド ${i + 1}`}
-          />
-        ))}
-        <span className="text-sm font-normal text-text-muted leading-relaxed ml-2">
-          {current + 1} / {SLIDES.length}
-        </span>
-      </div>
+      ))}
     </div>
   );
 }

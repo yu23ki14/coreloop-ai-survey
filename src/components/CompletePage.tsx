@@ -28,7 +28,7 @@ export default function CompletePage() {
   };
 
   return (
-    <div className="text-center py-20 space-y-6">
+    <div className="text-center py-5 sm:py-10 space-y-6">
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-50 border-2 border-green-200">
         <svg
           className="w-8 h-8 text-success"
@@ -54,8 +54,7 @@ export default function CompletePage() {
           secondary
           className="max-w-md mx-auto"
         >
-          いただいたご意見は、今後の熟議型世論調査での論点整理に活用させていただきます。
-          みなさまの声が、より良い政策づくりの一助となります。
+          いただいたご意見は、今後予定している熟議型世論調査やワークショップでの論点整理に活用させていただきます。
         </Typography>
       </div>
 
@@ -63,7 +62,7 @@ export default function CompletePage() {
       <div className="bg-white border border-border rounded-2xl p-6 max-w-md mx-auto text-left space-y-3">
         <Title as="p">今後の情報を受け取りませんか？</Title>
         <Typography as="p" size="regular" secondary>
-          追加ヒアリングのご案内やプロジェクトの進捗をお届けします。回答内容とは紐づきません。
+          追加ヒアリングのご案内やプロジェクトの進捗をお届けします。回答内容とメールアドレスは紐づきません。
         </Typography>
 
         {contactState === "done" ? (
@@ -101,7 +100,7 @@ export default function CompletePage() {
             <button
               type="submit"
               disabled={contactState === "submitting"}
-              className="w-full px-6 py-3 bg-accent text-white rounded-xl text-base font-semibold hover:bg-accent/90 transition-all shadow-sm hover:shadow-md disabled:opacity-50"
+              className="inline-block w-full text-center px-6 py-3 bg-primary text-white rounded-xl text-base font-semibold hover:bg-primary-light transition-all shadow-sm hover:shadow-md"
             >
               {contactState === "submitting" ? "送信中..." : "登録する"}
             </button>
@@ -113,13 +112,13 @@ export default function CompletePage() {
       <div className="bg-white border border-border rounded-2xl p-6 max-w-md mx-auto text-left space-y-3">
         <Title as="p">この取り組みを応援しませんか？</Title>
         <Typography as="p" size="regular" secondary>
-          本プロジェクトはクラウドファンディングで運営されています。熟議型世論調査の実現に向けて、ご支援いただけると幸いです。
+          本プロジェクトを進めるために、クラウドファンディングを実施中です。オンライン広告詐欺のない社会の実現に向けて、ご支援いただけると幸いです。
         </Typography>
         <a
           href="https://camp-fire.jp/projects/930941/view"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block w-full text-center px-6 py-3 bg-primary text-white rounded-xl text-base font-semibold hover:bg-primary-light transition-all shadow-sm hover:shadow-md"
+          className="inline-block w-full text-center px-6 py-3 border-2 border-primary text-primary rounded-xl text-base font-semibold hover:bg-primary/5 transition-all"
         >
           クラウドファンディングを見る
         </a>

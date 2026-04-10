@@ -161,10 +161,10 @@ export default function SurveyPage1({
       {/* Interest Level */}
       <section
         id={INTEREST_ID}
-        className="bg-white border border-border rounded-2xl p-5 sm:p-6"
+        className="bg-white border border-border rounded-2xl p-3 sm:p-6"
       >
         <div className="mb-4">
-          <div className="flex gap-3 items-start">
+          <div className="flex gap-2 items-start">
             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0 mt-0.5">
               0
             </span>
@@ -254,11 +254,11 @@ export default function SurveyPage1({
           <section
             key={question.id}
             id={`q-${question.id}`}
-            className="bg-white border border-border rounded-2xl p-5 sm:p-6"
+            className="bg-white border border-border rounded-2xl p-3 sm:p-6"
           >
             {/* Question header */}
             <div className="mb-4">
-              <div className="flex gap-3 items-start">
+              <div className="flex gap-2 items-start">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0 mt-0.5">
                   {index + 1}
                 </span>

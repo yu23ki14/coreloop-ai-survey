@@ -17,7 +17,7 @@ export function Title({
 }: TitleProps) {
   return (
     <Tag
-      className={`text-[15px] font-semibold text-text leading-relaxed ${className}`}
+      className={`text-[18px] font-semibold text-text leading-relaxed ${className}`}
     >
       {children}
     </Tag>
@@ -42,7 +42,7 @@ interface TypographyProps {
 }
 
 const SIZE_CLASS: Record<TypographySize, string> = {
-  regular: "text-[15px]",
+  regular: "text-[16px]",
   small: "text-sm",
 };
 
@@ -55,7 +55,7 @@ export function Typography({
   children,
   size = "regular",
   weight = "normal",
-  as: Tag = "span",
+  as: Tag = "p",
   muted = false,
   secondary = false,
   className = "",

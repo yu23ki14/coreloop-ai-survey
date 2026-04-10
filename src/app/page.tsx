@@ -469,7 +469,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={handleStartSurvey}
-                className="w-full sm:w-auto px-10 py-3.5 bg-primary text-white rounded-xl text-base font-semibold hover:bg-primary-light transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
+                className="w-full sm:w-auto px-10 py-4 bg-primary text-white rounded-xl text-lg font-bold hover:bg-primary-light transition-all shadow-lg hover:shadow-xl active:scale-[0.98] ring-2 ring-primary/30 ring-offset-2"
               >
                 調査を始める
               </button>

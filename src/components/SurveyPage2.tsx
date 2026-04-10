@@ -213,7 +213,7 @@ export default function SurveyPage2({
       <div className="flex flex-col items-center justify-center py-20 space-y-4">
         <div className="w-10 h-10 border-[3px] border-accent border-t-transparent rounded-full animate-spin" />
         <Typography as="p" size="regular" secondary>
-          あなたの回答に基づいて追加の質問を準備しています...
+          あなたの回答に合わせて追加の質問を準備しています...
         </Typography>
       </div>
     );
@@ -225,7 +225,7 @@ export default function SurveyPage2({
       <ProgressBar dots={progressDots} />
 
       {/* Intro text */}
-      <div className="bg-surface border border-border rounded-2xl p-5">
+      <div className="bg-surface border border-border rounded-2xl p-3">
         <Typography as="p" size="regular" secondary>
           前のページのご回答をもとに、あなたの考え方をより深く理解するための質問を用意しました。
           それぞれの設問について、あなたの考えに最も近いものをお選びください。
@@ -245,10 +245,10 @@ export default function SurveyPage2({
           <section
             key={question.id}
             id={`q-${question.id}`}
-            className="bg-white border border-border rounded-2xl p-5 sm:p-6"
+            className="bg-white border border-border rounded-2xl p-3 sm:p-6"
           >
             <div className="mb-4">
-              <div className="flex gap-3 items-start">
+              <div className="flex gap-2 items-start">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-accent/10 text-accent text-xs font-bold shrink-0 mt-0.5">
                   {index + 14}
                 </span>
@@ -288,7 +288,7 @@ export default function SurveyPage2({
       })}
 
       {/* Additional Comments */}
-      <section className="bg-white border border-border rounded-2xl p-5 sm:p-6">
+      <section className="bg-white border border-border rounded-2xl p-3 sm:p-6">
         <Title className="mb-1">その他、ご意見があればお聞かせください</Title>
         <Typography as="p" size="regular" muted className="mb-3">
           （任意）
