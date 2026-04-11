@@ -451,7 +451,9 @@ export default function Home() {
         )}
 
         {/* Complete */}
-        {state === "complete" && <CompletePage />}
+        {state === "complete" && (
+          <CompletePage />
+        )}
       </main>
 
       {/* Sticky start button for intro */}
