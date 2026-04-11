@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   INTEREST_OPTIONS,
   LIKERT_OPTIONS,
@@ -67,6 +73,18 @@ const LIKERT_COLORS: Record<string, string> = {
   dont_know: "bg-gray-300",
 };
 
+const LIKERT_ORDER = [
+  "strongly_disagree",
+  "disagree",
+  "neutral",
+  "agree",
+  "strongly_agree",
+  "dont_know",
+];
+
+// Followup questions start after the base questions
+const FOLLOWUP_START = SURVEY_QUESTIONS.length + 1; // Q14
+
 export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -79,6 +97,13 @@ export default function AdminPage() {
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(
     new Set(),
   );
+  const [sortKey, setSortKey] = useState<string>("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [tooltip, setTooltip] = useState<{
+    x: number;
+    y: number;
+    content: ReactNode;
+  } | null>(null);
 
   const toggleSession = (sessionId: string) => {
     setExpandedSessions((prev) => {
@@ -87,6 +112,15 @@ export default function AdminPage() {
       else next.add(sessionId);
       return next;
     });
+  };
+
+  const toggleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
   };
 
   const fetchData = useCallback(async () => {
@@ -145,6 +179,93 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, [isAuthenticated, fetchData]);
 
+  // Helper: get answers for a session as a map
+  const getAnswerMap = useCallback(
+    (sessionId: string): Record<string, AnswerRow> => {
+      if (!data) return {};
+      const map: Record<string, AnswerRow> = {};
+      for (const a of data.answersBySession[sessionId] || []) {
+        map[a.question_id] = a;
+      }
+      return map;
+    },
+    [data],
+  );
+
+  // Helper: collect free texts for a question from answersBySession
+  const getFreetextsForQuestion = (
+    questionId: string,
+  ): { text: string; likert: string; sessionId: string }[] => {
+    if (!data) return [];
+    const results: { text: string; likert: string; sessionId: string }[] = [];
+    for (const [sessionId, answers] of Object.entries(data.answersBySession)) {
+      for (const a of answers) {
+        if (a.question_id === questionId && a.freetext && a.freetext.trim()) {
+          results.push({ text: a.freetext, likert: a.likert || "", sessionId });
+        }
+      }
+    }
+    return results;
+  };
+
+  // Jump to a specific response row in the responses tab
+  const [highlightedSession, setHighlightedSession] = useState<string | null>(
+    null,
+  );
+  const jumpToResponse = (sessionId: string) => {
+    setActiveTab("responses");
+    setHighlightedSession(sessionId);
+    // Wait for tab switch render, then scroll
+    setTimeout(() => {
+      const el = document.getElementById(`row-${sessionId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Clear highlight after animation
+        setTimeout(() => setHighlightedSession(null), 2000);
+      }
+    }, 100);
+  };
+
+  // Sorted sessions for responses tab
+  const sortedSessions = useMemo(() => {
+    if (!data) return [];
+    const sessions = [...data.sessions];
+    sessions.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "date") {
+        cmp = (a.created_at || "").localeCompare(b.created_at || "");
+      } else if (sortKey === "interest") {
+        cmp = (a.interest_level || 0) - (b.interest_level || 0);
+      } else if (sortKey === "status") {
+        cmp = (a.page_completed || 0) - (b.page_completed || 0);
+      } else {
+        // Sort by a specific question's likert answer
+        const aMap = getAnswerMap(a.session_id);
+        const bMap = getAnswerMap(b.session_id);
+        const aIdx = LIKERT_ORDER.indexOf(aMap[sortKey]?.likert || "");
+        const bIdx = LIKERT_ORDER.indexOf(bMap[sortKey]?.likert || "");
+        cmp = aIdx - bIdx;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return sessions;
+  }, [data, sortKey, sortDir, getAnswerMap]);
+
+  // Show tooltip near a cell
+  const showTooltip = (
+    e: React.MouseEvent<HTMLElement>,
+    content: ReactNode,
+  ) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltip({
+      x: rect.left + rect.width / 2,
+      y: rect.bottom + 6,
+      content,
+    });
+  };
+
+  const hideTooltip = () => setTooltip(null);
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
@@ -178,29 +299,24 @@ export default function AdminPage() {
 
   if (!data) return null;
 
-  // Helper: get answers for a session as a map
-  const getAnswerMap = (sessionId: string): Record<string, AnswerRow> => {
-    const map: Record<string, AnswerRow> = {};
-    for (const a of data.answersBySession[sessionId] || []) {
-      map[a.question_id] = a;
-    }
-    return map;
-  };
-
-  // Helper: collect free texts for a question from answersBySession
-  const getFreetextsForQuestion = (
-    questionId: string,
-  ): { text: string; likert: string }[] => {
-    const results: { text: string; likert: string }[] = [];
-    for (const answers of Object.values(data.answersBySession)) {
-      for (const a of answers) {
-        if (a.question_id === questionId && a.freetext && a.freetext.trim()) {
-          results.push({ text: a.freetext, likert: a.likert || "" });
-        }
-      }
-    }
-    return results;
-  };
+  // Sort indicator
+  const SortHeader = ({
+    label,
+    sortId,
+  }: {
+    label: string;
+    sortId: string;
+  }) => (
+    <th
+      className="px-2 py-2 text-left font-medium text-text-muted cursor-pointer hover:text-text select-none whitespace-nowrap"
+      onClick={() => toggleSort(sortId)}
+    >
+      {label}
+      {sortKey === sortId && (
+        <span className="ml-0.5">{sortDir === "asc" ? "↑" : "↓"}</span>
+      )}
+    </th>
+  );
 
   return (
     <div className="min-h-screen bg-surface">
@@ -407,32 +523,63 @@ export default function AdminPage() {
                     })}
                   </div>
 
-                  {/* Free text responses */}
+                  {/* Free text responses grouped by likert */}
                   <details>
                     <summary className="text-sm text-accent cursor-pointer hover:underline">
                       自由記述回答を見る ({freetexts.length}件)
                     </summary>
-                    <div className="mt-3 space-y-2 max-h-96 overflow-y-auto">
+                    <div className="mt-3 space-y-3 max-h-[32rem] overflow-y-auto">
                       {freetexts.length === 0 ? (
                         <p className="text-sm text-text-muted">
                           自由記述回答はありません。
                         </p>
                       ) : (
-                        freetexts.map((ft, j) => (
-                          <div
-                            key={`${q.id}-ft-${j}`}
-                            className="bg-surface rounded-lg p-3 text-sm"
-                          >
-                            {ft.likert && (
-                              <span className="inline-block px-2 py-0.5 bg-gray-200 text-text-muted rounded text-xs mb-1">
-                                {LIKERT_LABELS[ft.likert] || ft.likert}
-                              </span>
-                            )}
-                            <p className="text-text-secondary leading-relaxed">
-                              {ft.text}
-                            </p>
-                          </div>
-                        ))
+                        (() => {
+                          const grouped: Record<
+                            string,
+                            { text: string; sessionId: string }[]
+                          > = {};
+                          for (const ft of freetexts) {
+                            const key = ft.likert || "_none";
+                            if (!grouped[key]) grouped[key] = [];
+                            grouped[key].push({
+                              text: ft.text,
+                              sessionId: ft.sessionId,
+                            });
+                          }
+                          return LIKERT_OPTIONS.filter(
+                            (opt) => grouped[opt.value]?.length,
+                          ).map((opt) => (
+                            <div key={opt.value}>
+                              <div className="flex items-center gap-2 mb-1.5">
+                                <span
+                                  className={`inline-block px-2 py-0.5 rounded text-xs text-white ${LIKERT_COLORS[opt.value]}`}
+                                >
+                                  {opt.label}
+                                </span>
+                                <span className="text-xs text-text-muted">
+                                  {grouped[opt.value].length}件
+                                </span>
+                              </div>
+                              <div className="space-y-1.5 ml-1 pl-3 border-l-2 border-border">
+                                {grouped[opt.value].map((entry, j) => (
+                                  <p
+                                    key={`${opt.value}-${j}`}
+                                    className="text-sm text-text-secondary leading-relaxed cursor-pointer hover:text-accent transition-colors"
+                                    onClick={() =>
+                                      jumpToResponse(entry.sessionId)
+                                    }
+                                  >
+                                    {entry.text}
+                                    <span className="ml-1 text-[10px] text-text-muted">
+                                      →
+                                    </span>
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          ));
+                        })()
                       )}
                     </div>
                   </details>
@@ -447,6 +594,9 @@ export default function AdminPage() {
             data={data}
             expandedSessions={expandedSessions}
             toggleSession={toggleSession}
+            showTooltip={showTooltip}
+            hideTooltip={hideTooltip}
+            jumpToResponse={jumpToResponse}
           />
         )}
 
@@ -456,46 +606,70 @@ export default function AdminPage() {
               <p className="text-sm text-text-secondary">
                 全{data.sessions?.length || 0}件の回答
               </p>
-              <button
-                type="button"
-                onClick={handleCsvDownload}
-                className="text-sm text-accent hover:underline"
-              >
-                CSVでダウンロード
-              </button>
+              <div className="flex items-center gap-4">
+                {/* Legend */}
+                <div className="flex flex-wrap gap-2">
+                  {LIKERT_OPTIONS.map((opt) => (
+                    <div
+                      key={opt.value}
+                      className="flex items-center gap-1"
+                    >
+                      <span
+                        className={`inline-block w-3 h-3 rounded-sm ${LIKERT_COLORS[opt.value]}`}
+                      />
+                      <span className="text-[10px] text-text-muted">
+                        {opt.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCsvDownload}
+                  className="text-sm text-accent hover:underline shrink-0"
+                >
+                  CSVでダウンロード
+                </button>
+              </div>
             </div>
             <div className="overflow-x-auto bg-white border border-border rounded-xl">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border bg-surface">
-                    <th className="px-3 py-2 text-left font-medium text-text-muted">
-                      日時
-                    </th>
-                    <th className="px-3 py-2 text-left font-medium text-text-muted">
-                      関心度
-                    </th>
+                    <SortHeader label="日時" sortId="date" />
+                    <SortHeader label="関心度" sortId="interest" />
                     {SURVEY_QUESTIONS.map((q, i) => (
-                      <th
+                      <SortHeader
                         key={q.id}
-                        className="px-3 py-2 text-left font-medium text-text-muted"
+                        label={`Q${i + 1}`}
+                        sortId={q.id}
+                      />
+                    ))}
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <th
+                        key={`fh-${i}`}
+                        className="px-2 py-2 text-left font-medium text-text-muted whitespace-nowrap"
                       >
-                        Q{i + 1}
+                        Q{FOLLOWUP_START + i}
                       </th>
                     ))}
-                    <th className="px-3 py-2 text-left font-medium text-text-muted">
-                      完了
-                    </th>
+                    <SortHeader label="完了" sortId="status" />
                   </tr>
                 </thead>
                 <tbody>
-                  {(data.sessions || []).map((s) => {
+                  {sortedSessions.map((s) => {
                     const answerMap = getAnswerMap(s.session_id);
+                    const followups =
+                      data.followupBySession[s.session_id] || [];
+                    const isHighlighted =
+                      highlightedSession === s.session_id;
                     return (
                       <tr
                         key={s.session_id}
-                        className="border-b border-border last:border-0 hover:bg-surface"
+                        id={`row-${s.session_id}`}
+                        className={`border-b border-border last:border-0 transition-colors duration-700 ${isHighlighted ? "bg-accent/15" : "hover:bg-surface/50"}`}
                       >
-                        <td className="px-3 py-2 text-text-secondary whitespace-nowrap">
+                        <td className="px-2 py-2 text-text-secondary whitespace-nowrap">
                           {s.created_at
                             ? new Date(s.created_at).toLocaleString("ja-JP", {
                                 month: "short",
@@ -505,7 +679,7 @@ export default function AdminPage() {
                               })
                             : "—"}
                         </td>
-                        <td className="px-3 py-2 text-text-secondary">
+                        <td className="px-2 py-2 text-text-secondary whitespace-nowrap">
                           {s.interest_level
                             ? INTEREST_LABELS[String(s.interest_level)] ||
                               String(s.interest_level)
@@ -514,35 +688,38 @@ export default function AdminPage() {
                         {SURVEY_QUESTIONS.map((q) => {
                           const answer = answerMap[q.id];
                           return (
-                            <td key={q.id} className="px-3 py-2">
-                              <span
-                                className="inline-block px-1.5 py-0.5 rounded text-[10px]"
-                                title={
-                                  answer?.likert
-                                    ? LIKERT_LABELS[answer.likert] ||
-                                      answer.likert
-                                    : "—"
-                                }
-                              >
-                                {answer?.likert
-                                  ? (
-                                      LIKERT_LABELS[answer.likert] ||
-                                      answer.likert
-                                    ).charAt(0)
-                                  : "—"}
-                              </span>
-                              {answer?.freetext && answer.freetext.trim() ? (
-                                <span
-                                  className="ml-1 text-accent cursor-help"
-                                  title={answer.freetext}
-                                >
-                                  +
-                                </span>
-                              ) : null}
+                            <td key={q.id} className="px-2 py-1.5">
+                              <LikertDot
+                                likert={answer?.likert || null}
+                                freetext={answer?.freetext || null}
+                                questionLabel={`Q${SURVEY_QUESTIONS.indexOf(q) + 1}`}
+                                questionText={q.text}
+                                showTooltip={showTooltip}
+                                hideTooltip={hideTooltip}
+                              />
                             </td>
                           );
                         })}
-                        <td className="px-3 py-2 text-text-secondary">
+                        {[0, 1, 2, 3, 4].map((i) => {
+                          const f = followups[i];
+                          return (
+                            <td key={`f-${i}`} className="px-2 py-1.5">
+                              {f ? (
+                                <LikertDot
+                                  likert={f.likert || null}
+                                  freetext={f.freetext || null}
+                                  questionLabel={`Q${FOLLOWUP_START + i}`}
+                                  questionText={f.text}
+                                  showTooltip={showTooltip}
+                                  hideTooltip={hideTooltip}
+                                />
+                              ) : (
+                                <span className="text-text-muted">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="px-2 py-2 text-text-secondary">
                           {s.page_completed === 2
                             ? "✓"
                             : `P${s.page_completed}`}
@@ -556,6 +733,72 @@ export default function AdminPage() {
           </div>
         )}
       </main>
+
+      {/* Fixed tooltip */}
+      {tooltip && (
+        <div
+          className="fixed z-50 max-w-xs bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl pointer-events-none"
+          style={{
+            left: tooltip.x,
+            top: tooltip.y,
+            transform: "translateX(-50%)",
+          }}
+        >
+          {tooltip.content}
+          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// LikertDot: colored square with hover tooltip
+// ============================================================
+function LikertDot({
+  likert,
+  freetext,
+  questionLabel,
+  questionText,
+  showTooltip,
+  hideTooltip,
+}: {
+  likert: string | null;
+  freetext: string | null;
+  questionLabel: string;
+  questionText: string;
+  showTooltip: (e: React.MouseEvent<HTMLElement>, content: ReactNode) => void;
+  hideTooltip: () => void;
+}) {
+  if (!likert) return <span className="text-text-muted">—</span>;
+
+  const color = LIKERT_COLORS[likert] || "bg-gray-300";
+  const label = LIKERT_LABELS[likert] || likert;
+  const hasFreetext = freetext && freetext.trim();
+
+  const tooltipContent = (
+    <div className="space-y-1.5">
+      <p className="text-gray-400 text-[10px]">{questionLabel}</p>
+      <p className="leading-relaxed">{questionText}</p>
+      <p className="font-medium">{label}</p>
+      {hasFreetext && (
+        <p className="text-gray-300 border-t border-gray-700 pt-1.5 leading-relaxed">
+          {freetext}
+        </p>
+      )}
+    </div>
+  );
+
+  return (
+    <div
+      className="inline-flex items-center gap-0.5 cursor-default"
+      onMouseEnter={(e) => showTooltip(e, tooltipContent)}
+      onMouseLeave={hideTooltip}
+    >
+      <span className={`inline-block w-4 h-4 rounded-sm ${color}`} />
+      {hasFreetext && (
+        <span className="text-accent text-[10px] font-bold">*</span>
+      )}
     </div>
   );
 }
@@ -567,19 +810,23 @@ function FollowupTab({
   data,
   expandedSessions,
   toggleSession,
+  showTooltip,
+  hideTooltip,
+  jumpToResponse,
 }: {
   data: AdminData;
   expandedSessions: Set<string>;
   toggleSession: (id: string) => void;
+  showTooltip: (e: React.MouseEvent<HTMLElement>, content: ReactNode) => void;
+  hideTooltip: () => void;
+  jumpToResponse: (sessionId: string) => void;
 }) {
-  // Sessions that completed page 2 (have followup data)
   const sessionsWithFollowup = (data.sessions || []).filter(
     (s) => data.followupBySession[s.session_id]?.length,
   );
 
   const totalFollowupSessions = sessionsWithFollowup.length;
 
-  // Calculate overall Likert distribution across all followup answers
   const overallDist: Record<string, number> = {};
   let totalFollowupAnswers = 0;
   for (const entries of Object.values(data.followupBySession)) {
@@ -655,6 +902,11 @@ function FollowupTab({
                 })
               : "—";
 
+            // Q1-Q13 answers for this session
+            const baseAnswers = (
+              data.answersBySession[session.session_id] || []
+            ).filter((a) => !a.is_followup);
+
             return (
               <div
                 key={session.session_id}
@@ -666,7 +918,7 @@ function FollowupTab({
                   onClick={() => toggleSession(session.session_id)}
                   className="w-full px-5 py-3 flex items-center justify-between hover:bg-surface/50 transition-colors text-left"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-wrap">
                     <span className="text-sm text-text-secondary">
                       {dateStr}
                     </span>
@@ -702,32 +954,89 @@ function FollowupTab({
                       })}
                     </div>
                   </div>
-                  <span className="text-text-muted text-sm">
+                  <span className="text-text-muted text-sm shrink-0 ml-2">
                     {isExpanded ? "▲" : "▼"}
                   </span>
                 </button>
 
                 {/* Expanded detail */}
                 {isExpanded && (
-                  <div className="border-t border-border px-5 py-4 space-y-3">
+                  <div className="border-t border-border px-5 py-4 space-y-4">
+                    {/* Q1-Q13 compact summary */}
+                    {baseAnswers.length > 0 && (
+                      <div className="bg-surface/50 rounded-lg p-3">
+                        <p className="text-xs text-text-muted mb-2 font-medium">
+                          Q1-Q{SURVEY_QUESTIONS.length} 回答
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {SURVEY_QUESTIONS.map((q, qi) => {
+                            const ans = baseAnswers.find(
+                              (a) => a.question_id === q.id,
+                            );
+                            const color = ans?.likert
+                              ? LIKERT_COLORS[ans.likert] || "bg-gray-300"
+                              : "bg-gray-200";
+                            const label = ans?.likert
+                              ? LIKERT_LABELS[ans.likert]
+                              : "未回答";
+                            const hasFreetext =
+                              ans?.freetext && ans.freetext.trim();
+                            return (
+                              <div
+                                key={q.id}
+                                className="flex items-center gap-1 cursor-default"
+                                onMouseEnter={(e) =>
+                                  showTooltip(
+                                    e,
+                                    <div className="space-y-1">
+                                      <p className="text-gray-400 text-[10px]">
+                                        Q{qi + 1}
+                                      </p>
+                                      <p className="leading-relaxed">
+                                        {q.text}
+                                      </p>
+                                      <p className="font-medium">{label}</p>
+                                      {hasFreetext && (
+                                        <p className="text-gray-300 border-t border-gray-700 pt-1 leading-relaxed">
+                                          {ans.freetext}
+                                        </p>
+                                      )}
+                                    </div>,
+                                  )
+                                }
+                                onMouseLeave={hideTooltip}
+                              >
+                                <span className="text-[10px] text-text-muted w-5 text-right">
+                                  {qi + 1}
+                                </span>
+                                <span
+                                  className={`inline-block w-4 h-4 rounded-sm ${color}`}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Followup Q&A */}
                     {followups.map((f, idx) => (
                       <div
                         key={f.question_id}
                         className="bg-surface rounded-lg p-3"
                       >
                         <p className="text-xs text-text-muted mb-1">
-                          質問 {idx + 1}
+                          Q{FOLLOWUP_START + idx}
                         </p>
                         <p className="text-sm text-text mb-2">{f.text}</p>
                         <div className="flex items-center gap-2">
-                          {f.likert && (
+                          {f.likert ? (
                             <span
                               className={`inline-block px-2 py-0.5 rounded text-xs text-white ${LIKERT_COLORS[f.likert] || "bg-gray-400"}`}
                             >
                               {LIKERT_LABELS[f.likert] || f.likert}
                             </span>
-                          )}
-                          {!f.likert && (
+                          ) : (
                             <span className="text-xs text-text-muted">
                               未回答
                             </span>
@@ -751,6 +1060,13 @@ function FollowupTab({
                           </p>
                         </div>
                       )}
+                    <button
+                      type="button"
+                      onClick={() => jumpToResponse(session.session_id)}
+                      className="text-xs text-accent hover:underline"
+                    >
+                      個別回答を見る →
+                    </button>
                   </div>
                 )}
               </div>
