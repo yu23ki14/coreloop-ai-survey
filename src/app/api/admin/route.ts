@@ -67,10 +67,14 @@ export async function GET(req: NextRequest) {
       return new NextResponse("No data", { status: 200 });
     }
 
-    // Collect all distinct question_ids for dynamic columns
+    // Collect all distinct question_ids for dynamic columns (sorted numerically)
     const allQuestionIds = [
       ...new Set((allAnswers || []).map((a) => a.question_id)),
-    ].sort();
+    ].sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ""), 10) || 0;
+      const numB = parseInt(b.replace(/\D/g, ""), 10) || 0;
+      return numA - numB;
+    });
 
     // CSV headers: session fields + dynamic question columns
     const sessionHeaders = [
@@ -129,7 +133,9 @@ export async function GET(req: NextRequest) {
       }),
     ];
 
-    return new NextResponse(csvRows.join("\n"), {
+    // UTF-8 BOM for Excel compatibility
+    const BOM = "\uFEFF";
+    return new NextResponse(BOM + csvRows.join("\n"), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="survey-responses-${new Date().toISOString().split("T")[0]}.csv"`,
@@ -154,19 +160,20 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Followup data
-  const followupData: {
-    question_id: string;
-    question_text: string;
-    likert: string;
-    freetext: string;
-  }[] = [];
+  // Followup data grouped by session_id
+  const followupBySession: Record<
+    string,
+    { question_id: string; text: string; likert: string; freetext: string }[]
+  > = {};
   for (const a of allAnswers || []) {
-    if (a.is_followup && a.question_text && a.likert) {
-      followupData.push({
+    if (a.is_followup && a.question_text) {
+      if (!followupBySession[a.session_id]) {
+        followupBySession[a.session_id] = [];
+      }
+      followupBySession[a.session_id].push({
         question_id: a.question_id,
-        question_text: a.question_text,
-        likert: a.likert,
+        text: a.question_text,
+        likert: a.likert || "",
         freetext: a.freetext || "",
       });
     }
@@ -190,7 +197,7 @@ export async function GET(req: NextRequest) {
     },
     interestDistribution: interestDist,
     likertDistributions,
-    followupData,
+    followupBySession,
     sessions,
     answersBySession,
   });
